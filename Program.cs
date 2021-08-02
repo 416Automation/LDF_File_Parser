@@ -1,5 +1,7 @@
-﻿using System;
+﻿using LDF_File_Parser.Logger;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 
@@ -9,23 +11,24 @@ namespace LDF_FILEPARSER
     {
         static void Main(string[] args)
         {
-
             List<LinFileContents> linFileContents = new List<LinFileContents>();
 
             try
             {
                 var pathToLDFFiles = @"C:\Users\chauh\Downloads\SampleLINFiles";
                 
+
                 var fileNameWithPath = Directory.GetFiles(pathToLDFFiles);
                 
                 foreach (var filePath in fileNameWithPath)
                 {
-                    linFileContents.Add(new LinFileContents(filePath));
+                    LinFileContents linFileContent = new LinFileContents(filePath);
+                    linFileContents.Add(linFileContent);
                 }
             }
-            catch (Exception exc)
+            catch (Exception e)
             {
-                Console.WriteLine(exc);
+                Logger.LogError(e);
             }
                 Console.ReadLine();
         }

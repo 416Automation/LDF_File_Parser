@@ -9,12 +9,12 @@ namespace LDF_FILEPARSER
     {
         public int Address { get; set; }
         public IReadOnlyCollection<bool> BitValues { get; set; }
+        public EncodingNode Encoding { get; private set; }
         public string InitalValue { get; private set; }
         public string Name { get; private set; }
         public string[] RawSignalValues { get; }
         public int Size { get; private set; }
         public int StartAddress { get; set; }
-
         public Signal(string name, string size, string initalValue, string[] rawSignalValues)
         {
 
@@ -42,5 +42,13 @@ namespace LDF_FILEPARSER
         }
 
         public override string ToString() => $"Name: {Name}, Size: {Size}, StartAddress: {StartAddress}, Initial Value: {InitalValue}";
+
+        public void UpdateEncoding(EncodingNode encoding)
+        {
+            if (encoding is null)
+                throw new ArgumentNullException(nameof(encoding));
+
+            Encoding = encoding;
+        }
     }
 }
