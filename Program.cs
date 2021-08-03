@@ -17,7 +17,6 @@ namespace LDF_FILEPARSER
             {
                 var pathToLDFFiles = @"C:\Users\chauh\Downloads\SampleLINFiles";
                 
-
                 var fileNameWithPath = Directory.GetFiles(pathToLDFFiles);
                 
                 foreach (var filePath in fileNameWithPath)
@@ -33,7 +32,6 @@ namespace LDF_FILEPARSER
                 Console.ReadLine();
         }
 
-        // TODO Regex for Encoding representations
         // TODO Make properties with collections Read Only
         // TODO Create Exceptions
         // TODO Add Logs

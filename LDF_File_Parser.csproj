@@ -44,6 +44,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Enums\EncodingType.cs" />
+    <Compile Include="Exceptions\BracketMatchException.cs" />
+    <Compile Include="Exceptions\EncodingNameNotFoundException.cs" />
+    <Compile Include="Exceptions\InvalidEncodingTypeException.cs" />
+    <Compile Include="Exceptions\SignalNotFoundException.cs" />
     <Compile Include="Extension\IEnumerableExtension.cs" />
     <Compile Include="Extension\StringExtension.cs" />
     <Compile Include="Logger\Logger.cs" />

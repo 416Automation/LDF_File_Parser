@@ -12,7 +12,7 @@ namespace LDF_File_Parser.Extension
         /// <returns>
         ///   <br />
         /// </returns>
-        public static string Join<T>(this IEnumerable<T> collection, string seperator = ";")
+        public static string Join<T>(this IEnumerable<T> collection, string seperator = " ; ")
         {
             return string.Join(seperator, collection.ToArray());
         }
