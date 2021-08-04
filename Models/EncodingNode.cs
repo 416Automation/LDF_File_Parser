@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LDF_FILEPARSER
 {
-    public class EncodingNode 
+    public class EncodingNode
     {
         public ICollection<IEncodingValue> EncodingTypes { get; } = new List<IEncodingValue>();
 

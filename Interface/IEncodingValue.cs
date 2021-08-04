@@ -7,5 +7,7 @@ namespace LDF_FILEPARSER
         EncodingType Type { get; }
         string HexAddress { get; }
         ICollection<Signal> Signals { get; }
-}
+
+        string Description { get; }
+    }
 }

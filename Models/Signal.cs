@@ -7,7 +7,6 @@ namespace LDF_FILEPARSER
 
     public class Signal
     {
-        public int Address { get; set; }
         public IReadOnlyCollection<bool> BitValues { get; set; }
         public EncodingNode Encoding { get; private set; }
         public string InitalValue { get; private set; }

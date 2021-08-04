@@ -5,6 +5,7 @@ namespace LDF_FILEPARSER
 {
     public class PhyscialEncodingValue : IEncodingValue
     {
+        public string Description { get; set; }
         public string HexAddress { get; }
         public ICollection<Signal> Signals { get; }
         public EncodingType Type { get; } = EncodingType.Physical;

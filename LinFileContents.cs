@@ -3,20 +3,28 @@ using LDF_File_Parser.Extension;
 using LDF_File_Parser.Logger;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace LDF_FILEPARSER
 {
-    public class LinFileContents
+    public class LinFileContents : INotifyPropertyChanged
     {
         public IDictionary<string, EncodingNode> Encodings { get; set; } = new Dictionary<string, EncodingNode>();
+
         public string FileName { get; private set; } = string.Empty;
+
         public string FileNameWithPath { get; private set; } = string.Empty;
+
         public string FileRawData { get; }
+
         public ICollection<Frame> Frames { get; set; } = new HashSet<Frame>();
+
         public IDictionary<string, Signal> Signals { get; set; } = new Dictionary<string, Signal>();
+
         public LinFileContents(string fileNameWithPath)
         {
             if (string.IsNullOrEmpty(fileNameWithPath))
@@ -40,6 +48,8 @@ namespace LDF_FILEPARSER
             var signalEncodingRepresentation = GetNodeContent(NodeNames.SignalRepresentation);
             ExtractEncodingsRepresentation(signalEncodingRepresentation);
         }
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         /// <summary>
         /// Extracts the encodings.
@@ -253,7 +263,7 @@ namespace LDF_FILEPARSER
 
                 var frameDescription = frameGroup[i].Value.Split(new char[] { ':', '{', ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-                string frameName = frameDescription[0].Trim(CharSymbol.WhiteSpace);
+                string frameName = frameDescription[0].Trim(CharSymbol.WhiteSpace, CharSymbol.TabSpace);
 
                 Frame frame = new Frame(frameName, frameDescription[1], int.Parse(frameDescription[3]));
 
@@ -313,7 +323,6 @@ namespace LDF_FILEPARSER
             }
         }
 
-
         /// <summary>
         /// Gets the content of the node from the LDF file in a string format
         /// </summary>
@@ -344,6 +353,11 @@ namespace LDF_FILEPARSER
             }
 
             return nodeContent;
+        }
+
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
