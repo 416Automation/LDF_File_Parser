@@ -7,6 +7,25 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
+    <UserControl.Resources>
+        <Style TargetType="DataGridColumnHeader">
+            <Style.Setters>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            </Style.Setters>
+        </Style>
+        <Style TargetType="DataGridCell" >
+            <Style.Setters>
+                <Setter Property="Width" Value="30"/>
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            </Style.Setters>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="IsEditing" Value="True" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
         
     <Grid Background="White">
         <Grid.RowDefinitions>
@@ -30,7 +49,6 @@
         </Grid>
 
         <Grid Grid.Row="1">
-
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="0.1*"/>
                 <ColumnDefinition/>
@@ -44,41 +62,48 @@
 
         <Grid Grid.Row="2">
             <ListBox ItemsSource="{Binding SelectedFrame.Signals}" Grid.Row="1">
-                <ListBox.Template>
+                <!--<ListBox.Template>
                     <ControlTemplate>
                         <DockPanel LastChildFill="True" >
                             <Grid DockPanel.Dock="Top" Margin="5"  >
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"></ColumnDefinition>
+                                    <ColumnDefinition Width="150"></ColumnDefinition>
                                     <ColumnDefinition Width="300"></ColumnDefinition>
                                     <ColumnDefinition Width="200"></ColumnDefinition>
                                     <ColumnDefinition Width="200"></ColumnDefinition>
+                                    <ColumnDefinition Width="104"></ColumnDefinition>
+
                                 </Grid.ColumnDefinitions>
-                                <Label FontSize="20" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="0" Content="Address"/>
-                                <Label FontSize="20" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="1" Content="Signal Name"/>
-                                <Label FontSize="20" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="2" Content="Encoding Name"/>
-                                <Label FontSize="20" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="3" Content="Encoding Type"/>
+                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="0" Content="Start Address"/>
+                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="1" Content="Signal Name"/>
+                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="2" Content="Encoding Name"/>
+                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="3" Content="Encoding Type"/>
+                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="4" Content="Hex Value"/>
+
                             </Grid>
                             <ItemsPresenter></ItemsPresenter>
                         </DockPanel>
                     </ControlTemplate>
-                </ListBox.Template>
+                </ListBox.Template>-->
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <WrapPanel  Margin="1">
-                            <Label FontSize="20" Content="{Binding StartAddress}" Width="100" BorderBrush="Black" BorderThickness="1" />
-                            <Label FontSize="20" Content="{Binding Name}" Width="300"  BorderBrush="Black" BorderThickness="1"/>
-                            <Label FontSize="20" Content="{Binding Encoding.Name}" Width="200" BorderBrush="Black" BorderThickness="1"/>
+                        <WrapPanel  Margin="1" Height="60" >
+                            <Label FontSize="15" Height="60" Content="{Binding StartAddress}" Width="150" BorderBrush="Black" BorderThickness="1" />
+                            <Label FontSize="15" Height="60" Content="{Binding Name}" Width="300"  BorderBrush="Black" BorderThickness="1"/>
+                            <Label FontSize="15" Height="60" Content="{Binding Encoding.Name}" Width="200" BorderBrush="Black" BorderThickness="1"/>
 
-                            <ComboBox Name="test" SelectedValue=""  ItemsSource="{Binding Encoding.EncodingTypes}" HorizontalAlignment="Center"  BorderBrush="Black" BorderThickness="1" >
+                            <DataGrid  ItemsSource="{Binding BitMap.DefaultView, UpdateSourceTrigger=PropertyChanged}"  VerticalAlignment="Stretch">
+                            </DataGrid>
+                            
+                            <!--<ComboBox Name="encodingSelected" ItemsSource="{Binding Encoding.EncodingTypes}" SelectedIndex="0" HorizontalAlignment="Center"  BorderBrush="Black" BorderThickness="1" >
                                 <ComboBox.ItemTemplate >
                                             <DataTemplate>
-                                                <Label Content="{Binding Description}" Width="250" FontSize="20" />
+                                                <Label Content="{Binding Description}" Width="174" FontSize="15" />
                                             </DataTemplate>
                                 </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            </ComboBox>-->
 
-                            <Label  FontSize="20" Content="{Binding ElementName=test, Path=SelectedValue.HexAddress}"  Width="300" BorderBrush="Black" BorderThickness="1"/> 
+                            <!--<Label  FontSize="15" Content="{Binding ElementName=encodingSelected, Path=SelectedValue.HexAddress}"  Width="100" BorderBrush="Black" BorderThickness="1"/>--> 
                         </WrapPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>

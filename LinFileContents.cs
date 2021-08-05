@@ -30,23 +30,62 @@ namespace LDF_FILEPARSER
             if (string.IsNullOrEmpty(fileNameWithPath))
                 throw new ArgumentException($"'{nameof(fileNameWithPath)}' cannot be null or empty.", nameof(fileNameWithPath));
 
-            FileNameWithPath = fileNameWithPath;
+            try
+            {
+                FileNameWithPath = fileNameWithPath;
 
-            FileName = Path.GetFileName(FileNameWithPath);
+                FileName = Path.GetFileName(FileNameWithPath);
 
-            FileRawData = File.ReadAllText(FileNameWithPath);
+                FileRawData = File.ReadAllText(FileNameWithPath);
 
-            var signalContent = GetNodeContent(NodeNames.Signals);
-            ExtractSignals(signalContent);
+                var signalContent = GetNodeContent(NodeNames.Signals);
+                ExtractSignals(signalContent);
 
-            var framesContent = GetNodeContent(NodeNames.Frames);
-            ExtractFrames(framesContent);
+                var framesContent = GetNodeContent(NodeNames.Frames);
+                ExtractFrames(framesContent);
 
-            var signalEncodingsContent = GetNodeContent(NodeNames.SignalEncodingTypes);
-            ExtractEncodings(signalEncodingsContent);
+                var signalEncodingsContent = GetNodeContent(NodeNames.SignalEncodingTypes);
+                ExtractEncodings(signalEncodingsContent);
 
-            var signalEncodingRepresentation = GetNodeContent(NodeNames.SignalRepresentation);
-            ExtractEncodingsRepresentation(signalEncodingRepresentation);
+                var signalEncodingRepresentation = GetNodeContent(NodeNames.SignalRepresentation);
+                ExtractEncodingsRepresentation(signalEncodingRepresentation);
+            }
+            catch (Exception exc)
+            {
+                Logger.LogError(exc,$"Parsing file unsuccessful, file name with path: {fileNameWithPath}");
+                throw;
+            }
+
+            #region If bit values changed by encoding
+            //var signalsWithNoEncoding = Signals.Where(s => s.Value.Encoding == null).ToArray();
+            //List<int> Size = new List<int>();
+
+            //foreach (var signal in signalsWithNoEncoding)
+            //{
+
+            //    signal.Value.Encoding = new EncodingNode("Undefined");
+
+            //    int size = signal.Value.Size;
+
+            //    if (size == 1)
+            //    {
+            //        signal.Value.Encoding.EncodingTypes.Add(new LogicalEncodingValue("0x00", "FALSE - 0"));
+            //        signal.Value.Encoding.EncodingTypes.Add(new LogicalEncodingValue("0x01", "TRUE  - 1"));
+
+            //    }
+            //    else 
+            //    {
+
+            //        var numberOfPossiblities = Math.Pow(2, size);
+            //        for (int i = 0; i < numberOfPossiblities; i++)
+            //        {
+            //            string hexAddress = i.ToString().ConvertToHex();
+
+            //            signal.Value.Encoding.EncodingTypes.Add(new LogicalEncodingValue(hexAddress, hexAddress));
+            //        }
+            //    }
+            //} 
+            #endregion
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -58,7 +97,7 @@ namespace LDF_FILEPARSER
         /// <exception cref="Exception">
         /// as it cant have more values
         /// or
-        /// it should have atleast three values
+        /// it should have at least three values
         /// or
         /// </exception>
         private void ExtractEncodings(string signalEncodingsContent)
@@ -122,11 +161,11 @@ namespace LDF_FILEPARSER
 
                 var encodingNode = new EncodingNode(encodingName);
                 foreach (var encodingValue in from Match signalmatch in encodingValueMatches
-                                              let encodingValue = signalmatch.Value.Split(new char[] { ',', ';', CharSymbol.TabSpace, CharSymbol.WhiteSpace }, StringSplitOptions.RemoveEmptyEntries)
+                                              let encodingValue = signalmatch.Value.Split(new char[] { ',', ';', CharSymbol.TabSpace, CharSymbol.WhiteSpace, '\"' }, StringSplitOptions.RemoveEmptyEntries)
                                               select encodingValue)
                 {
 
-                    // EncodingValue should have atleast three values 
+                    // EncodingValue should have at least three values 
                     // TODO type of encoding, hex address , description
                     if (encodingValue.Length < 3)
                         throw new InvalidDataException($"After parsing the encoding values, the array should contain atleast 3 elememts (Encoding type, Hex address, Description). Array elements: {encodingValue.Join()}, Count: {encodingValue.Length}");
@@ -140,7 +179,8 @@ namespace LDF_FILEPARSER
                     // Check if the encoding type is logical / physical 
                     if (string.Equals(encodingValueType, EncodingValueType.Logical))
                     {
-                        encodingNode.EncodingTypes.Add(new LogicalEncodingValue(encodingValueAddress, encodingValue[2]));
+                        string encodingDescription = encodingValue[2].Trim(CharSymbol.TabSpace, CharSymbol.WhiteSpace, '"', '\"');
+                        encodingNode.EncodingTypes.Add(new LogicalEncodingValue(encodingValueAddress, encodingDescription));
                     }
                     else if (string.Equals(encodingValueType, EncodingValueType.Physical))
                     {

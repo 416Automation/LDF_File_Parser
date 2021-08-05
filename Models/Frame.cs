@@ -27,6 +27,6 @@ namespace LDF_FILEPARSER
             ID = iD.ConvertToHex();
             ResponseLength = responseLength;
         }
-        public override string ToString() => $"Name: {Name} - ID:{ID}";
+        public override string ToString() => $"Name: {Name} - ID: {ID}";
     }
 }
