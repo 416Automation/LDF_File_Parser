@@ -41,7 +41,8 @@ namespace LDF_File_Viewer
 
         public IEncodingValue SelectedEncoding
         {
-            get => _selectedEncoding; set
+            get => _selectedEncoding; 
+            set
             {
                 if (_selectedEncoding != value)
                 {

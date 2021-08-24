@@ -14,11 +14,27 @@ namespace LDF_FILEPARSER
         private string _hexValue = "0x00";
         private int _integerValue = 0;
         private bool _valueNotInRange = false;
-
+        private IEncodingValue _selectedEncoding;
 
         public ICollection<BoolValues> BooleanValues { get; set; }
         public RelayCommand ClearAll { get; private set; }
         public EncodingNode Encoding { get; set; }
+
+        public IEncodingValue SelectedEncoding
+        {
+            get => _selectedEncoding;
+            set
+            {
+                if (_selectedEncoding != value)
+                {
+                    _selectedEncoding = value;
+                    HexValue = _selectedEncoding.HexAddress;
+                    IntegerValue = Convert.ToInt32(HexValue, 16);
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
         public Frame Frame { get; private set; }
         public string HexValue
         {
@@ -29,6 +45,12 @@ namespace LDF_FILEPARSER
                     _hexValue = value;
                     IntegerValue = Convert.ToInt32(_hexValue, 16);
                     ConvertBooleanArray(IntegerValue);
+
+                    var foundEncoding = Encoding?.EncodingTypes.First(s => string.Equals(s.HexAddress, _hexValue));
+                    
+                    if (foundEncoding != null)
+                        SelectedEncoding = foundEncoding;
+
                     NotifyPropertyChanged();
                 }
             }
@@ -56,6 +78,7 @@ namespace LDF_FILEPARSER
 
                     HexValue = _integerValue.ToString().ConvertToHex();
                     ConvertBooleanArray(_integerValue);
+                    Frame?.ConvertToByteArray();
                     NotifyPropertyChanged();
                 }
             }
@@ -176,7 +199,10 @@ namespace LDF_FILEPARSER
             IntegerValueChanging = false;
         }
 
-        private void ClearAllPressed() => IntegerValue = 0;
+        private void ClearAllPressed()
+        {
+            IntegerValue = 0;
+        }
 
         private void ConvertBooleanArray(int integerValue)
         {

@@ -35,7 +35,8 @@
             </Grid.ColumnDefinitions>
 
             <Label Padding="10 0 0 0" FontSize="15" Content="Select Encoding" VerticalAlignment="Center" HorizontalAlignment="Left"    />
-            <ComboBox Grid.ColumnSpan="3" IsEnabled="{Binding EncodingsExisits}"  SelectedItem="{Binding SelectedEncoding}" Margin="5 0 0 0"  VerticalContentAlignment="Center" Grid.Column="1" Padding="10  0 0 0" FontSize="15" Height="40" Width="500" ItemsSource="{Binding Signal.Encoding.EncodingTypes}"/>
+            <ComboBox Grid.ColumnSpan="3" IsEnabled="{Binding EncodingsExisits}"  SelectedItem="{Binding Signal.SelectedEncoding}" Margin="5 0 0 0"  VerticalContentAlignment="Center" Grid.Column="1" Padding="10  0 0 0" FontSize="15" Height="40" Width="500" 
+                      ItemsSource="{Binding Signal.Encoding.EncodingTypes}"/>
 
             <Label Padding="10 0 0 0"  Grid.Row="1" Grid.Column="0"      FontSize="15" Content="Integer Value" VerticalAlignment="Center" HorizontalAlignment="Left"/>
             <TextBox     VerticalContentAlignment="Center" 

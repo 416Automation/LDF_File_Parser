@@ -1,0 +1,10 @@
+Maximize, Minimize, close
+LIN Speed + Version
+Select all, unselect all
+Drop down retain previous value on open 
+Max permissible
+Error message instead of message box
+Start with 0,1,2,3,4
+On - Gree, off light gray
+Hide (instead of disable)
+Lin -> LIN 
