@@ -23,12 +23,25 @@ namespace LDF_FILEPARSER
 
         public ICollection<Frame> Frames { get; set; } = new HashSet<Frame>();
 
+        public string LanguageVersion { get; set; }
+        public string ProtocolVersion { get; set; }
         public IDictionary<string, Signal> Signals { get; set; } = new Dictionary<string, Signal>();
+        public string Speed { get; set; } 
+
 
         public LinFileContents(string fileNameWithPath)
         {
             if (string.IsNullOrEmpty(fileNameWithPath))
                 throw new ArgumentException($"'{nameof(fileNameWithPath)}' cannot be null or empty.", nameof(fileNameWithPath));
+
+
+            // Check for MIME type too 
+            var isExtensionValid = Path.GetExtension(fileNameWithPath) == ".ldf";
+            if (isExtensionValid is false)
+            {
+                // throw file exception for file not valid ldf 
+                throw new InvalidFileExtension($"Filename {Path.GetFileName(fileNameWithPath)} does not have .ldf extension");
+            }
 
             try
             {
@@ -37,6 +50,10 @@ namespace LDF_FILEPARSER
                 FileName = Path.GetFileName(FileNameWithPath);
 
                 FileRawData = File.ReadAllText(FileNameWithPath);
+
+                StringReader test2 = new StringReader(FileRawData);
+
+                ExtractLINDescription();
 
                 var signalContent = GetNodeContent(NodeNames.Signals);
                 ExtractSignals(signalContent);
@@ -49,46 +66,51 @@ namespace LDF_FILEPARSER
 
                 var signalEncodingRepresentation = GetNodeContent(NodeNames.SignalRepresentation);
                 ExtractEncodingsRepresentation(signalEncodingRepresentation);
+
+
+                foreach ((int largestSizeOfSignal, Signal signal, Frame frame) in from item in Frames
+                                                                                  let largestSizeOfSignal = item.Signals.Max(s => s.Size)
+                                                                                  from test in item.Signals
+                                                                                  select (largestSizeOfSignal, test, item))
+                {
+                    signal.CreateBitValues(largestSizeOfSignal, frame);
+                }
             }
             catch (Exception exc)
             {
-                Logger.LogError(exc,$"Parsing file unsuccessful, file name with path: {fileNameWithPath}");
-                throw;
+                Logger.LogError(exc, $"Parsing file unsuccessful, file name with path: {fileNameWithPath}");
+                throw ;
             }
-
-            #region If bit values changed by encoding
-            //var signalsWithNoEncoding = Signals.Where(s => s.Value.Encoding == null).ToArray();
-            //List<int> Size = new List<int>();
-
-            //foreach (var signal in signalsWithNoEncoding)
-            //{
-
-            //    signal.Value.Encoding = new EncodingNode("Undefined");
-
-            //    int size = signal.Value.Size;
-
-            //    if (size == 1)
-            //    {
-            //        signal.Value.Encoding.EncodingTypes.Add(new LogicalEncodingValue("0x00", "FALSE - 0"));
-            //        signal.Value.Encoding.EncodingTypes.Add(new LogicalEncodingValue("0x01", "TRUE  - 1"));
-
-            //    }
-            //    else 
-            //    {
-
-            //        var numberOfPossiblities = Math.Pow(2, size);
-            //        for (int i = 0; i < numberOfPossiblities; i++)
-            //        {
-            //            string hexAddress = i.ToString().ConvertToHex();
-
-            //            signal.Value.Encoding.EncodingTypes.Add(new LogicalEncodingValue(hexAddress, hexAddress));
-            //        }
-            //    }
-            //} 
-            #endregion
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+
+        /// <summary>
+        /// Extracts the description of tjhe LIN.
+        /// </summary>
+        /// <param name="newline">The newline.</param>
+        /// <param name="index">The index.</param>
+        /// <param name="IsSpeed">if set to <c>true</c> [is speed].</param>
+        /// <returns></returns>
+        private string ExtractLINDescription(string newline, int index, bool IsSpeed = false)
+        {
+            try
+            {
+                var result = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (IsSpeed)
+                {
+                    return result[index] + CharSymbol.WhiteSpace + result[3];
+                }
+
+                return result[index];
+            }
+            catch (Exception exc)
+            {
+                Logger.LogError(exc);
+                return "N/A";
+            }
+        }
 
         /// <summary>
         /// Extracts the encodings.
@@ -329,10 +351,45 @@ namespace LDF_FILEPARSER
                     }
                 }
 
+                frame.Signals.OrderBy(s => s.StartAddress);
                 Frames.Add(frame);
             }
         }
 
+        private void ExtractLINDescription()
+        {
+            bool protocolVersionFound = false;
+            bool languageVersionFound = false;
+            bool speedFound = false;
+
+
+
+            foreach (var newline in FileRawData.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (newline.Contains(NodeNames.ProtocolVersion))
+                {
+                    ProtocolVersion = ExtractLINDescription(newline, 2);
+                    protocolVersionFound = true;
+                }
+                else if (newline.Contains(NodeNames.LanguageVersion))
+                {
+                    var test = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
+                    LanguageVersion =  ExtractLINDescription(newline, 2);
+                    languageVersionFound = true;
+                }
+
+                else if (newline.Contains(NodeNames.Speed))
+                {
+                    var test = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
+                    Speed = ExtractLINDescription(newline, 2, true) ;
+                    speedFound = true;
+                }
+                else if (protocolVersionFound && languageVersionFound && speedFound)
+                {
+                    break;
+                }
+            }
+        }
         /// <summary>
         /// Extracts the signals from the LDF File
         /// </summary>

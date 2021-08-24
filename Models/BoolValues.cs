@@ -1,0 +1,45 @@
+﻿using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+
+namespace LDF_FILEPARSER
+{
+    public class BoolValues : INotifyPropertyChanged
+    {
+        private bool _valueBool = false;
+
+        public bool Enabled { get; set; } = false;
+
+        public int Placeholder { get; set; }
+
+        public bool Value
+        {
+            get => _valueBool;
+            set
+            {
+                if (_valueBool != value)
+                {
+                    _valueBool = value;
+                    PerformBooleanToInt?.Invoke(this, null);
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public event EventHandler PerformBooleanToInt;
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public BoolValues(int placeholder, bool enabled = false, bool value = false)
+        {
+            Placeholder = placeholder;
+            Enabled = enabled;
+            Value = value;
+        }
+
+    }
+}

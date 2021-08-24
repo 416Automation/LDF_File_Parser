@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{6D6F35CE-4C44-4C64-95B1-FA2289A914FD}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <RootNamespace>LDF_File_Parser</RootNamespace>
     <AssemblyName>LDF_File_Parser</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
@@ -32,7 +32,13 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
+    <Reference Include="GalaSoft.MvvmLight">
+      <HintPath>LDF_File_Viewer\bin\Debug\GalaSoft.MvvmLight.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -46,12 +52,14 @@
     <Compile Include="Enums\EncodingType.cs" />
     <Compile Include="Exceptions\BracketMatchException.cs" />
     <Compile Include="Exceptions\EncodingNameNotFoundException.cs" />
+    <Compile Include="Exceptions\InvalidFileExtension.cs" />
     <Compile Include="Exceptions\InvalidEncodingTypeException.cs" />
     <Compile Include="Exceptions\SignalNotFoundException.cs" />
     <Compile Include="Extension\IEnumerableExtension.cs" />
     <Compile Include="Extension\StringExtension.cs" />
-    <Compile Include="Logger\Logger.cs" />
     <Compile Include="Logger\FileWriter.cs" />
+    <Compile Include="Logger\Logger.cs" />
+    <Compile Include="Models\BoolValues.cs" />
     <Compile Include="Models\EncodingNode.cs" />
     <Compile Include="Models\Frame.cs" />
     <Compile Include="Interface\IEncodingValue.cs" />

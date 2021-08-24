@@ -13,9 +13,9 @@ namespace LDF_File_Parser.Extension
         public static string ConvertToHex(this string value)
         {
             if (int.TryParse(value, out int number))
-                return string.Format("0x{0:X}", number.ToString("X"));
+                return string.Format("0x{0:X}", number.ToString("X2"));
             else
-                // Assume it is already hexdecimal 
+                // Assume it is already hexadecimal 
                 return value;
 
             //int value = (int)new System.ComponentModel.Int32Converter().ConvertFromString(hexString);

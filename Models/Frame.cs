@@ -1,11 +1,46 @@
 ﻿using LDF_File_Parser.Extension;
+using LDF_File_Parser.Logger;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace LDF_FILEPARSER
 {
-    public class Frame
+    public class Frame : INotifyPropertyChanged
     {
+        private string _linDisplayMessage = $"ID     : 0x00" + Environment.NewLine + "Data : 0x00";
+
+
+
+        private byte[] _linMessage = new byte[] { 0, 0, 0, 0 };
         public string ID { get; set; }
+
+        public string LinDisplayMessage
+        {
+            get => _linDisplayMessage; set
+            {
+                if (_linDisplayMessage != value)
+                {
+                    _linDisplayMessage = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public byte[] LinMessage
+        {
+            get => _linMessage; set
+            {
+                if (_linMessage != value)
+                {
+                    _linMessage = value;
+                }
+            }
+        }
 
         public string Name { get; set; }
 
@@ -26,7 +61,73 @@ namespace LDF_FILEPARSER
             Name = name;
             ID = iD.ConvertToHex();
             ResponseLength = responseLength;
+
+            LinDisplayMessage = $"ID     : {ID}" + Environment.NewLine + "Data : 0x00";
         }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public void ConvertToByteArray()
+        {
+            try
+            {
+                List<bool> booleanValuesFromSignals = new List<bool>();
+
+                foreach (var signal in Signals.OrderBy(s => s.StartAddress))
+                {
+                    booleanValuesFromSignals.AddRange(signal.BooleanValues.OrderBy(k => k.Placeholder).Where(s => s.Enabled == true).Select(s => s.Value).ToList());
+                }
+
+                bool[] bools = booleanValuesFromSignals.ToArray();
+
+                byte[] arr1 = Array.ConvertAll(bools, b => b ? (byte)1 : (byte)0);
+
+                // pack (in this case, using the first bool as the lsb - if you want
+                // the first bool as the msb, reverse things ;-p)
+                int bytes = bools.Length / 8;
+                if ((bools.Length % 8) != 0) bytes++;
+
+                LinMessage = new byte[bytes];
+                int bitIndex = 0, byteIndex = 0;
+                for (int i = 0; i < bools.Length; i++)
+                {
+                    if (bools[i])
+                    {
+                        LinMessage[byteIndex] |= (byte)(((byte)1) << bitIndex);
+                    }
+                    bitIndex++;
+                    if (bitIndex == 8)
+                    {
+                        bitIndex = 0;
+                        byteIndex++;
+                    }
+                }
+
+                StringBuilder bytearrayString = new StringBuilder();
+
+                bytearrayString.AppendLine($"ID     : {ID}");
+
+                var byteString = string.Empty;
+                foreach (var byteValue in LinMessage)
+                {
+                    byteString += string.Format("0x{0:X} ", byteValue.ToString("X2"));
+                }
+
+                bytearrayString.AppendLine($"Data : {byteString}");
+
+                LinDisplayMessage = bytearrayString.ToString();
+            }
+            catch (Exception exc)
+            {
+                Logger.LogError(exc);
+            }
+        }
+
         public override string ToString() => $"Name: {Name} - ID: {ID}";
+
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

@@ -3,11 +3,99 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:local="clr-namespace:LDF_File_Viewer" d:DataContext="{d:DesignInstance Type=local:LinViewerViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
     <UserControl.Resources>
+
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibiltyConverter"/>
+
+        <Style x:Key="RoundCorner" TargetType="{x:Type Button}">
+            <Style.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="8"/>
+                </Style>
+            </Style.Resources>
+        </Style>
+
+        <Style TargetType="CheckBox" x:Key="CircleCheckbox">
+            <Setter Property="Cursor" Value="Hand"></Setter>
+            <Setter Property="Content" Value=""></Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type CheckBox}">
+                        <Grid>
+
+                            <Rectangle x:Name="outerRectangle">
+                                <Rectangle.Fill>
+                                    <RadialGradientBrush>
+                                        <GradientStop Offset="0" Color="LightGray"/>
+                                    </RadialGradientBrush>
+                                </Rectangle.Fill>
+                            </Rectangle>
+                            <Rectangle Margin="10" x:Name="highlightCircle" >
+                                <Rectangle.Fill >
+                                    <LinearGradientBrush >
+                                        <GradientStop  Color="LightGreen"/>
+                                    </LinearGradientBrush>
+                                </Rectangle.Fill>
+                            </Rectangle>
+                            <ContentPresenter x:Name="content" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="highlightCircle" Property="Fill">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0.3,0" EndPoint="0.7,1">
+                                            <GradientStop Color="Gray"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="outerRectangle" Property="Fill">
+                                    <Setter.Value>
+                                        <RadialGradientBrush>
+                                            <GradientStop  Color="Gray"/>
+                                        </RadialGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="highlightCircle" Property="Fill">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0.3,0" EndPoint="0.7,1">
+                                            <GradientStop Color="LightGreen"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="outerRectangle" Property="Fill">
+                                    <Setter.Value>
+                                        <RadialGradientBrush>
+                                            <GradientStop  Color="LightGreen"/>
+                                        </RadialGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="highlightCircle" Property="Fill">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0.3,0" EndPoint="0.7,1">
+                                            <GradientStop  Color="LightCoral"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
         <Style TargetType="DataGridColumnHeader">
             <Style.Setters>
                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -26,88 +114,203 @@
             </Style.Triggers>
         </Style>
     </UserControl.Resources>
-        
-    <Grid Background="White">
+
+    <Grid Background="LightGray">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.15*"/>
-            <RowDefinition Height="0.1*"/>
+            <RowDefinition Height="0.25*"/>
+            <RowDefinition Height="0.3*"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
 
-        <Grid>
+        <!--Broswe section grid-->
+        <Grid Background="LightGray">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.3*"/>
+                <ColumnDefinition Width="0.25*"/>
                 <ColumnDefinition Width="1*"/>
-                <ColumnDefinition Width="0.5*"/>
+                <ColumnDefinition Width="0.2*"/>
+                <ColumnDefinition Width="0.3*"/>
             </Grid.ColumnDefinitions>
 
-            <Label  FontSize="20"  Grid.Column="0" Height="50" HorizontalAlignment="Stretch" Content="LDF File Name" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  />
-            <TextBox IsHitTestVisible="False"  Padding="20 0 0 0 "  FontSize="20" Margin="10" VerticalContentAlignment="Center"  Grid.Column="1"  TextAlignment="Left" HorizontalAlignment="Stretch" Text="{Binding LinFileContent.FileName, Mode=OneWay}"/>
-            <Button FontSize="20"  Grid.Column="2"  HorizontalAlignment="Stretch" Margin="10"   Content="Browse" Command="{Binding Browse}" />
+            <Label FontWeight="SemiBold"  FontSize="20"  Grid.Column="0" Height="50" HorizontalAlignment="Stretch" Padding=" 25 0 0 0" Content="LDF File Name:" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"  />
 
-            <Border BorderBrush="Black" BorderThickness="1" Grid.ColumnSpan="3"/>
+            <TextBox AllowDrop="True" Height="35" IsReadOnly="True" PreviewDrop="Button_DragLeave" PreviewDragOver="TextBox_PreviewDrop" IsHitTestVisible="True" Padding="20 0 0 0 "  FontSize="20" Margin="10" VerticalContentAlignment="Center"  Grid.Column="1"  TextAlignment="Left" HorizontalAlignment="Stretch" Text="{Binding LinFileContent.FileName, Mode=OneWay}"/>
+
+            <Button  FontSize="20" Width="85" Height="30"  Grid.Column="2" fa:Awesome.Content="FolderOpen"  Background="White"
+                     TextElement.FontFamily="pack://application:,,,/FontAwesome.WPF;component/#FontAwesome"  BorderThickness="0"  ToolTip="Browse Files"
+                      HorizontalAlignment="Stretch" Command="{Binding Browse}" >
+            </Button>
+
+            <Border Grid.Column="3"  BorderBrush="Black" BorderThickness="1">
+                
+            <Grid Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Left">
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                    <Label FontWeight="DemiBold" Grid.Row="0" ContentStringFormat="Speed = {0}" Content="{Binding LinFileContent.Speed, FallbackValue=0}"/>
+                    <Label FontWeight="DemiBold" Grid.Row="1" ContentStringFormat="LanguageVersion = {0}" Content="{Binding LinFileContent.LanguageVersion, FallbackValue=0}"/>
+                <Label FontWeight="DemiBold" Grid.Row="2" ContentStringFormat="ProtocolVersion = {0}" Content="{Binding LinFileContent.ProtocolVersion , FallbackValue=0}"/>
+            </Grid>
+            </Border>
+            
+            <Border BorderBrush="Black" BorderThickness="1" Grid.ColumnSpan="4"/>
         </Grid>
 
-        <Grid Grid.Row="1">
+
+        <!--Frame selection and Lin Message-->
+        <Grid Grid.Row="1" Background="LightGray">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.1*"/>
+                <ColumnDefinition Width="0.22*"/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
-            <Label  FontSize="20"  Grid.Column="0" Height="50" HorizontalAlignment="Stretch" Content="Frames:" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  />
 
-            <ComboBox FontSize="20" Grid.Column="1" ItemsSource="{Binding Frames}"  HorizontalContentAlignment="Left"  VerticalContentAlignment="Center" SelectedItem="{Binding SelectedFrame}"/>
-            <Border BorderBrush="Black" BorderThickness="1" Grid.ColumnSpan="3"/>
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition Height="1*"/>
+            </Grid.RowDefinitions>
+
+            <Label FontWeight="SemiBold" FontSize="20"  Padding="25 0 0 0" Grid.Column="0" Height="50" HorizontalAlignment="Stretch" Content="Selected Frames:" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"  />
+
+            <ComboBox FontSize="20" Grid.Column="1" Height="50" Padding="25 0 0 0" ItemsSource="{Binding Frames}" SelectedIndex="1" HorizontalContentAlignment="Left"  VerticalContentAlignment="Center" SelectedItem="{Binding SelectedFrame}"/>
+
+            <Border BorderBrush="Black" BorderThickness="1" Grid.ColumnSpan="3"></Border>
+
+            <Label FontWeight="SemiBold" FontSize="20" Grid.Row="1" Padding="25 0 0 0"  Grid.Column="0" Height="50" HorizontalAlignment="Stretch" Content="LIN Message:" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"  />
+            <TextBox  IsReadOnly="True" Padding="25 0 0 0" Grid.Row="1" Grid.ColumnSpan="2"  Height="55" Background="LightGreen"  FontSize="20" Grid.Column="1" Text="{Binding SelectedFrame.LinDisplayMessage }"/>
+
+
         </Grid>
 
 
-        <Grid Grid.Row="2">
-            <ListBox ItemsSource="{Binding SelectedFrame.Signals}" Grid.Row="1">
-                <!--<ListBox.Template>
-                    <ControlTemplate>
-                        <DockPanel LastChildFill="True" >
-                            <Grid DockPanel.Dock="Top" Margin="5"  >
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="150"></ColumnDefinition>
-                                    <ColumnDefinition Width="300"></ColumnDefinition>
-                                    <ColumnDefinition Width="200"></ColumnDefinition>
-                                    <ColumnDefinition Width="200"></ColumnDefinition>
-                                    <ColumnDefinition Width="104"></ColumnDefinition>
+        <!--List View-->
+        <Grid Grid.Row="2"  >
 
-                                </Grid.ColumnDefinitions>
-                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="0" Content="Start Address"/>
-                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="1" Content="Signal Name"/>
-                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="2" Content="Encoding Name"/>
-                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="3" Content="Encoding Type"/>
-                                <Label FontSize="15" Background="LightGray" BorderBrush="Black" BorderThickness="1" Grid.Column="4" Content="Hex Value"/>
+            <Grid>
+                <ListView ItemsSource="{Binding SelectedFrame.Signals}" Tag="{Binding .}" Grid.Row="1"  Background="WhiteSmoke">
+                    <ListView.View>
+                        <GridView >
+                            <GridView.Columns  >
+                                <GridViewColumn Width="200"  >
+                                    <GridViewColumn.Header >
+                                        <GridViewColumnHeader Background="LightBlue" Height="35" >
+                                            <TextBlock  Text="Signal Name" FontWeight="Bold" FontSize="15"/>
+                                        </GridViewColumnHeader>
+                                    </GridViewColumn.Header>
+                                    <GridViewColumn.CellTemplate >
+                                        <DataTemplate>
+                                            <TextBlock Padding="15 0 0 0" FontWeight="DemiBold" VerticalAlignment="Center"  FontSize="15" Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
 
-                            </Grid>
-                            <ItemsPresenter></ItemsPresenter>
-                        </DockPanel>
-                    </ControlTemplate>
-                </ListBox.Template>-->
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <WrapPanel  Margin="1" Height="60" >
-                            <Label FontSize="15" Height="60" Content="{Binding StartAddress}" Width="150" BorderBrush="Black" BorderThickness="1" />
-                            <Label FontSize="15" Height="60" Content="{Binding Name}" Width="300"  BorderBrush="Black" BorderThickness="1"/>
-                            <Label FontSize="15" Height="60" Content="{Binding Encoding.Name}" Width="200" BorderBrush="Black" BorderThickness="1"/>
+                                <GridViewColumn   Width="300">
+                                    <GridViewColumn.Header >
+                                        <GridViewColumnHeader Background="LightBlue" Height="35" >
+                                            <TextBlock  Text="Encoding Name" FontWeight="Bold" FontSize="15"/>
+                                        </GridViewColumnHeader>
+                                    </GridViewColumn.Header>
+                                    <GridViewColumn.CellTemplate >
 
-                            <DataGrid  ItemsSource="{Binding BitMap.DefaultView, UpdateSourceTrigger=PropertyChanged}"  VerticalAlignment="Stretch">
-                            </DataGrid>
-                            
-                            <!--<ComboBox Name="encodingSelected" ItemsSource="{Binding Encoding.EncodingTypes}" SelectedIndex="0" HorizontalAlignment="Center"  BorderBrush="Black" BorderThickness="1" >
-                                <ComboBox.ItemTemplate >
-                                            <DataTemplate>
-                                                <Label Content="{Binding Description}" Width="174" FontSize="15" />
-                                            </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>-->
+                                        <DataTemplate>
+                                            <Grid >
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition/>
+                                                    <ColumnDefinition/>
+                                                </Grid.ColumnDefinitions>
 
-                            <!--<Label  FontSize="15" Content="{Binding ElementName=encodingSelected, Path=SelectedValue.HexAddress}"  Width="100" BorderBrush="Black" BorderThickness="1"/>--> 
-                        </WrapPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+
+                                                <TextBlock Padding="15 0 0 0 " FontWeight="DemiBold" VerticalAlignment="Center"  FontSize="15" Text="{Binding Encoding.Name , TargetNullValue='N/A', FallbackValue='N/A' }" />
+
+
+                                                <Button Grid.Column="1" Height="25" Width="25" Background="LightGray"  CommandParameter="{Binding .}" 
+                                                        fa:Awesome.Content="Search" BorderThickness="0" 
+                                                        TextElement.FontFamily="pack://application:,,,/FontAwesome.WPF;component/#FontAwesome"
+                                                        Command="{Binding  Path=Tag.SelectedSignal,  RelativeSource={RelativeSource  AncestorType={x:Type ItemsControl}}}">
+                                                </Button>
+
+
+                                            </Grid>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                                <GridViewColumn  Width="350">
+                                    <GridViewColumn.Header >
+                                        <GridViewColumnHeader Background="LightBlue" Height="35" >
+                                            <TextBlock  Text="Bit Value" FontWeight="Bold" FontSize="15"/>
+                                        </GridViewColumnHeader>
+                                    </GridViewColumn.Header>
+                                    <GridViewColumn.CellTemplate >
+                                        <ItemContainerTemplate >
+
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition/>
+                                                    <ColumnDefinition Width="0.4*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ItemsControl ItemsSource="{Binding BooleanValues}" HorizontalAlignment="Right" HorizontalContentAlignment="Left" >
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel  Orientation="Horizontal" HorizontalAlignment="Left" ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border BorderBrush="Black"  BorderThickness="1" Visibility="{Binding Enabled, Converter={StaticResource BooleanToVisibiltyConverter}}"  HorizontalAlignment="Right">
+                                                                <StackPanel Orientation="Vertical">
+                                                                    <Label     VerticalContentAlignment="Center" HorizontalContentAlignment="Left" VerticalAlignment="Center" HorizontalAlignment="Center"  Content="{Binding Placeholder}"/>
+                                                                    <CheckBox  Style="{StaticResource CircleCheckbox}"  IsChecked="{Binding Value}"  IsEnabled="{Binding Enabled}" VerticalContentAlignment="Center" HorizontalContentAlignment="Left" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5">
+                                                    <Button Command="{Binding SelectAll}" Content="Select all" VerticalContentAlignment="Center" Style="{StaticResource RoundCorner}"  />
+                                                    <Button Command="{Binding ClearAll}" Content="Clear" VerticalContentAlignment="Center"   Style="{StaticResource RoundCorner}"/>
+                                                </StackPanel>
+
+                                            </Grid>
+
+                                        </ItemContainerTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+
+                                <GridViewColumn   Width="130">
+                                    <GridViewColumn.Header >
+                                        <GridViewColumnHeader Background="LightBlue" Height="35" >
+                                            <TextBlock  Text="Hex Value" FontWeight="Bold" FontSize="15"/>
+                                        </GridViewColumnHeader>
+                                    </GridViewColumn.Header>
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Padding="15 0 0 0 " FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"  FontSize="15" Text="{Binding HexValue}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn   Width="130" >
+                                    <GridViewColumn.Header >
+                                        <GridViewColumnHeader Background="LightBlue" Height="35" >
+                                            <TextBlock  Text="Integer Value" FontWeight="Bold" FontSize="15"/>
+                                        </GridViewColumnHeader>
+                                    </GridViewColumn.Header>
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Padding="15 0 0 0 " VerticalAlignment="Center" FontWeight="DemiBold" HorizontalAlignment="Center"  FontSize="15" Text="{Binding IntegerValue}" />
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+
+                            </GridView.Columns>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Grid>
+
         </Grid>
     </Grid>
 </UserControl>

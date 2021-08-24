@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LDF_File_Viewer"
         mc:Ignorable="d"
-        Title="LDF File Viewer" WindowState="Normal">
+        Title="LDF File Viewer" WindowState="Normal" >
     <Grid>
         <local:LinViewer/>
 

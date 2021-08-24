@@ -7,7 +7,7 @@ namespace LDF_FILEPARSER
     {
         public ICollection<IEncodingValue> EncodingTypes { get; } = new List<IEncodingValue>();
 
-        public string Name { get; }
+        public string Name { get;  set; } = "N/A";
 
         public EncodingNode(string name)
         {

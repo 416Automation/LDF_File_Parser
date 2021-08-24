@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LDF_File_Parser.Logger
 {
-    static partial class Logger
+    public static partial class Logger
     {
         public static string FileNameWithPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"LDF_{DateTime.Today:yyyy-MM-dd}.log");
 

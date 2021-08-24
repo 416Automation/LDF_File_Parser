@@ -1,0 +1,80 @@
+﻿<UserControl x:Class="LDF_File_Viewer.SignalValueUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:LDF_File_Viewer"
+             mc:Ignorable="d" 
+             d:DesignHeight="350" d:DesignWidth="800">
+
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+    </UserControl.Resources>
+    <Grid Background="White">
+
+
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="0.2*"/>
+            <RowDefinition Height="0.5*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="0.3*"/>
+                <RowDefinition Height="0.3*"/>
+                <RowDefinition Height="0.3*"/>
+            </Grid.RowDefinitions>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.3*"/>
+                <ColumnDefinition Width="0.3*"/>
+                <ColumnDefinition Width="0.3*"/>
+                <ColumnDefinition Width="0.3*"/>
+            </Grid.ColumnDefinitions>
+
+            <Label Padding="10 0 0 0" FontSize="15" Content="Select Encoding" VerticalAlignment="Center" HorizontalAlignment="Left"    />
+            <ComboBox Grid.ColumnSpan="3" IsEnabled="{Binding EncodingsExisits}"  SelectedItem="{Binding SelectedEncoding}" Margin="5 0 0 0"  VerticalContentAlignment="Center" Grid.Column="1" Padding="10  0 0 0" FontSize="15" Height="40" Width="500" ItemsSource="{Binding Signal.Encoding.EncodingTypes}"/>
+
+            <Label Padding="10 0 0 0"  Grid.Row="1" Grid.Column="0"      FontSize="15" Content="Integer Value" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <TextBox     VerticalContentAlignment="Center" 
+                         Height="40" HorizontalAlignment="Stretch" Margin="5 0 0 0"  Grid.Row="1" Grid.Column="1" Text="{Binding Signal.IntegerValue}" FontSize="15"/>
+
+            <Label Padding="10 0 0 0"  Grid.Row="1" Grid.Column="2" FontSize="15" Content="Hexadecimal Value" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <TextBox  VerticalContentAlignment="Center" Height="40" Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Margin="5 0 0 0" Text="{Binding Signal.HexValue}" FontSize="15"/>
+
+
+            <Label Padding="10 0 0 0"  Grid.Row="2" Grid.Column="0"      FontSize="15" Content=" Max Integer Value" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <TextBox  IsHitTestVisible="False"   VerticalContentAlignment="Center" 
+                         Height="40" HorizontalAlignment="Stretch" Margin="5 0 0 0"  Grid.Row="2" Grid.Column="1" Text="{Binding Signal.MaxValue , Mode=OneTime}" FontSize="15"/>
+
+
+
+            <Label Padding="10 0 0 0"  Grid.Row="2" Grid.Column="2" FontSize="15" Content=" Max Hexadecimal Value" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+            <TextBox IsHitTestVisible="False"  VerticalContentAlignment="Center" Height="40" Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Margin="5 0 0 0" Text="{Binding Signal.MaxHexValue , Mode=OneTime}" FontSize="15"/>
+
+
+        </Grid>
+
+        <Grid Grid.Row="1">
+
+            <Label Content="{Binding ErrorMessage }" HorizontalAlignment="Center" FontSize="20" Foreground="Red" FontWeight="DemiBold"  Visibility="{Binding Signal.ValueNotInRange , Converter={StaticResource BoolToVisConverter}}"/>
+
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+
+            <Button Command="{Binding Submit}" FontSize="15" Content="Submit" Height="45" Width="200" Margin="10"/>
+            <Button Command="{Binding Cancel}" FontSize="15" Content="Cancel" Height="45" Width="200" Margin="10" Grid.Column="1"/>
+
+        </Grid>
+
+      
+
+    </Grid>
+</UserControl>
