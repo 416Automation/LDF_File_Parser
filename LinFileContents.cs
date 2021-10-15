@@ -26,7 +26,7 @@ namespace LDF_FILEPARSER
         public string LanguageVersion { get; set; }
         public string ProtocolVersion { get; set; }
         public IDictionary<string, Signal> Signals { get; set; } = new Dictionary<string, Signal>();
-        public string Speed { get; set; } 
+        public string Speed { get; set; }
 
 
         public LinFileContents(string fileNameWithPath)
@@ -79,14 +79,14 @@ namespace LDF_FILEPARSER
             catch (Exception exc)
             {
                 Logger.LogError(exc, $"Parsing file unsuccessful, file name with path: {fileNameWithPath}");
-                throw ;
+                throw;
             }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         /// <summary>
-        /// Extracts the description of tjhe LIN.
+        /// Extracts the description of the LIN.
         /// </summary>
         /// <param name="newline">The newline.</param>
         /// <param name="index">The index.</param>
@@ -351,8 +351,48 @@ namespace LDF_FILEPARSER
                     }
                 }
 
-                frame.Signals.OrderBy(s => s.StartAddress);
+                ConfigureNoDataBits(frame);
+                frame.Signals = frame.Signals.OrderBy(s => s.StartAddress).ToList();
                 Frames.Add(frame);
+            }
+        }
+
+        private void ConfigureNoDataBits(Frame frame)
+        {
+            try
+            {
+                int j = 1;
+
+                for (int i = 0; i < frame.Signals.Count; i++)
+                {
+                    if (j == frame.Signals.Count)
+                    {
+                        // Finished 
+                        break;
+                    }
+
+                    int difference = frame.Signals[j].StartAddress - frame.Signals[i].StartAddress;
+                    var dataIsGood = difference == frame.Signals[i].Size;
+
+                    if (dataIsGood)
+                    {
+                        // we go on to next one
+                        j++;
+                        continue;
+                    }
+
+
+                    // tell the signal has no use data bits after
+
+                    frame.Signals[i].HasNoUseDataBitsAfter = true;
+                    frame.Signals[i].NumberOfUseDataBits= difference - frame.Signals[i].Size;
+
+                    j++;
+                }
+            }
+            catch (Exception exc) 
+            {
+                Logger.LogError(exc);
             }
         }
 
@@ -374,14 +414,14 @@ namespace LDF_FILEPARSER
                 else if (newline.Contains(NodeNames.LanguageVersion))
                 {
                     var test = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
-                    LanguageVersion =  ExtractLINDescription(newline, 2);
+                    LanguageVersion = ExtractLINDescription(newline, 2);
                     languageVersionFound = true;
                 }
 
                 else if (newline.Contains(NodeNames.Speed))
                 {
                     var test = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
-                    Speed = ExtractLINDescription(newline, 2, true) ;
+                    Speed = ExtractLINDescription(newline, 2, true);
                     speedFound = true;
                 }
                 else if (protocolVersionFound && languageVersionFound && speedFound)

@@ -47,7 +47,7 @@ namespace LDF_FILEPARSER
                     ConvertBooleanArray(IntegerValue);
 
                     var foundEncoding = Encoding?.EncodingTypes.First(s => string.Equals(s.HexAddress, _hexValue));
-                    
+
                     if (foundEncoding != null)
                         SelectedEncoding = foundEncoding;
 
@@ -106,30 +106,37 @@ namespace LDF_FILEPARSER
 
         private bool IntegerValueChanging { get; set; } = false;
 
-        public Signal(string name, string size, string initalValue, string[] rawSignalValues)
-        {
+        public bool HasNoUseDataBitsAfter { get; set; } = false;
 
+        public int NumberOfUseDataBits { get; set; } = 0;
+
+
+        public Signal(string name, int size, string initalValue, string[] rawSignalValues = null)
+        {
             #region Parameter Validation
             if (string.IsNullOrEmpty(name))
                 throw new ArgumentException($"'{nameof(name)}' cannot be null or empty.", nameof(name));
 
-            if (string.IsNullOrEmpty(size))
-                throw new ArgumentException($"'{nameof(size)}' cannot be null or empty.", nameof(size));
 
             if (string.IsNullOrEmpty(initalValue))
                 throw new ArgumentException($"'{nameof(initalValue)}' cannot be null or empty.", nameof(initalValue));
 
-            if (rawSignalValues is null)
-                throw new ArgumentNullException(nameof(rawSignalValues));
             #endregion
 
             Name = name;
-            Size = int.Parse(size);
+            Size = size;
             InitalValue = initalValue.ConvertToHex();
             RawSignalValues = rawSignalValues;
 
             SelectAll = new RelayCommand(SelectAllPressed);
             ClearAll = new RelayCommand(ClearAllPressed);
+
+        }
+
+        public Signal(string name, string size, string initalValue, string[] rawSignalValues = null) : this(name, int.Parse(size), initalValue, rawSignalValues)
+        {
+
+
 
         }
 
@@ -148,24 +155,40 @@ namespace LDF_FILEPARSER
 
             BooleanValues = new ObservableCollection<BoolValues>();
 
-            for (int i = maxSize; i >= 0; i--)
-            {
-                int placeholder = (int)Math.Pow(2, i);
 
-                if (i < Size)
+            /// Three things need to achieve
+            /// Make a Boolean Values or the max size
+            /// Enabled all bits inside boolean values until the Size
+            /// Enabled all bits inside boolean values which are not in use but also disable them set no in use property to false
+            /// Rest all bits do not enable
+
+            maxSize += NumberOfUseDataBits;
+
+            var bitsToEnable = Size + NumberOfUseDataBits;
+
+            for (int i = 0; i < maxSize; i++)
+            {
+                BoolValues bit;
+
+                if (i < bitsToEnable)
                 {
-                    BoolValues bit = new BoolValues(i, true);
-                    bit.PerformBooleanToInt += BooleanValueChanged;
-                    BooleanValues.Add(bit);
+                    bit = new BoolValues(i, true);
+
+                    if (i >= Size)
+                    {
+                        bit.InUse = false;
+                    }
+
                 }
                 else
                 {
-                    BoolValues bit = new BoolValues(i);
-                    bit.PerformBooleanToInt += BooleanValueChanged;
-                    BooleanValues.Add(bit);
+                    bit = new BoolValues(i, false);
                 }
+                bit.PerformBooleanToInt += BooleanValueChanged;
+                BooleanValues.Add(bit);
             }
-            BooleanValues.OrderBy(s => s.Placeholder);
+
+            BooleanValues = BooleanValues.OrderByDescending(s => s.Placeholder).ToList();
         }
 
         public override string ToString() => $"Name: {Name}, Size: {Size}, StartAddress: {StartAddress}, Initial Value: {InitalValue}";

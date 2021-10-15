@@ -10,6 +10,8 @@ namespace LDF_FILEPARSER
 
         public bool Enabled { get; set; } = false;
 
+        public bool InUse { get; set; } = true;
+
         public int Placeholder { get; set; }
 
         public bool Value
@@ -33,6 +35,11 @@ namespace LDF_FILEPARSER
 
         public event EventHandler PerformBooleanToInt;
         public event PropertyChangedEventHandler PropertyChanged;
+
+        public override string ToString()
+        {
+            return $"Placeholder: {Placeholder}, Enabled: {Enabled}";
+        }
 
         public BoolValues(int placeholder, bool enabled = false, bool value = false)
         {

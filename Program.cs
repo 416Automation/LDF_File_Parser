@@ -21,8 +21,7 @@ namespace LDF_FILEPARSER
                 
                 foreach (var filePath in fileNameWithPath)
                 {
-                    LinFileContents linFileContent = new LinFileContents(filePath);
-                    linFileContents.Add(linFileContent);
+                    linFileContents.Add(new LinFileContents(filePath));
                 }
             }
             catch (Exception e)

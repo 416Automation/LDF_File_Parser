@@ -13,9 +13,6 @@ namespace LDF_FILEPARSER
     public class Frame : INotifyPropertyChanged
     {
         private string _linDisplayMessage = $"ID     : 0x00" + Environment.NewLine + "Data : 0x00";
-
-
-
         private byte[] _linMessage = new byte[] { 0, 0, 0, 0 };
         public string ID { get; set; }
 
@@ -46,7 +43,7 @@ namespace LDF_FILEPARSER
 
         public int ResponseLength { get; set; }
 
-        public ICollection<Signal> Signals { get; set; } = new HashSet<Signal>();
+        public List<Signal> Signals { get; set; } = new List<Signal>();
 
         public Frame(string name, string iD, int responseLength)
         {

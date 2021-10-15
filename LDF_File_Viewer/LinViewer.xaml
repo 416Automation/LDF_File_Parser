@@ -27,64 +27,32 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type CheckBox}">
                         <Grid>
-
-                            <Rectangle x:Name="outerRectangle">
-                                <Rectangle.Fill>
-                                    <RadialGradientBrush>
-                                        <GradientStop Offset="0" Color="LightGray"/>
-                                    </RadialGradientBrush>
-                                </Rectangle.Fill>
-                            </Rectangle>
-                            <Rectangle Margin="10" x:Name="highlightCircle" >
-                                <Rectangle.Fill >
-                                    <LinearGradientBrush >
-                                        <GradientStop  Color="LightGreen"/>
-                                    </LinearGradientBrush>
-                                </Rectangle.Fill>
-                            </Rectangle>
-                            <ContentPresenter x:Name="content" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="24"></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="24"></ColumnDefinition>
+                                <ColumnDefinition ></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="White" BorderBrush="#C6C6C6" BorderThickness="1" CornerRadius="0" Width="20" Height="20" VerticalAlignment="Center"  >
+                                <Grid>
+                                    <Rectangle x:Name="outerEllipse" Grid.Column="0" Fill="LightGray" >
+                                    </Rectangle>
+                                </Grid>
+                            </Border>
+                            <ContentPresenter Grid.Column="1" x:Name="content" Margin="0,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="highlightCircle" Property="Fill">
-                                    <Setter.Value>
-                                        <LinearGradientBrush StartPoint="0.3,0" EndPoint="0.7,1">
-                                            <GradientStop Color="Gray"/>
-                                        </LinearGradientBrush>
-                                    </Setter.Value>
-                                </Setter>
-                                <Setter TargetName="outerRectangle" Property="Fill">
-                                    <Setter.Value>
-                                        <RadialGradientBrush>
-                                            <GradientStop  Color="Gray"/>
-                                        </RadialGradientBrush>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="highlightCircle" Property="Fill">
-                                    <Setter.Value>
-                                        <LinearGradientBrush StartPoint="0.3,0" EndPoint="0.7,1">
-                                            <GradientStop Color="LightGreen"/>
-                                        </LinearGradientBrush>
-                                    </Setter.Value>
-                                </Setter>
-                                <Setter TargetName="outerRectangle" Property="Fill">
-                                    <Setter.Value>
-                                        <RadialGradientBrush>
-                                            <GradientStop  Color="LightGreen"/>
-                                        </RadialGradientBrush>
-                                    </Setter.Value>
+                                <Setter TargetName="outerEllipse" Property="Fill" Value="LightGreen">
                                 </Setter>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="False">
-                                <Setter TargetName="highlightCircle" Property="Fill">
-                                    <Setter.Value>
-                                        <LinearGradientBrush StartPoint="0.3,0" EndPoint="0.7,1">
-                                            <GradientStop  Color="LightCoral"/>
-                                        </LinearGradientBrush>
-                                    </Setter.Value>
+                                <Setter TargetName="outerEllipse" Property="Fill" Value="LightGray">
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="outerEllipse" Property="Fill" Value="lightcoral">
                                 </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -92,7 +60,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
+  
         <Style TargetType="ListViewItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
@@ -122,7 +90,7 @@
             <RowDefinition/>
         </Grid.RowDefinitions>
 
-        <!--Broswe section grid-->
+        <!--Browse section grid-->
         <Grid Background="LightGray">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="0.25*"/>
@@ -260,7 +228,8 @@
                                                             <Border BorderBrush="Black"  BorderThickness="1" Visibility="{Binding Enabled, Converter={StaticResource BooleanToVisibiltyConverter}}"  HorizontalAlignment="Right">
                                                                 <StackPanel Orientation="Vertical">
                                                                     <Label     VerticalContentAlignment="Center" HorizontalContentAlignment="Left" VerticalAlignment="Center" HorizontalAlignment="Center"  Content="{Binding Placeholder}"/>
-                                                                    <CheckBox  Style="{StaticResource CircleCheckbox}"  IsChecked="{Binding Value}"  IsEnabled="{Binding Enabled}" VerticalContentAlignment="Center" HorizontalContentAlignment="Left" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                                                    <CheckBox  Style="{StaticResource CircleCheckbox}"  IsChecked="{Binding Value}" IsEnabled="{Binding InUse }"
+                                                                               VerticalContentAlignment="Center" HorizontalContentAlignment="Left" VerticalAlignment="Center" HorizontalAlignment="Center" />
                                                                 </StackPanel>
                                                             </Border>
                                                         </DataTemplate>
