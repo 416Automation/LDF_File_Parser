@@ -45,9 +45,19 @@ namespace LDF_FILEPARSER
                 FileRawData = File.ReadAllText(FileNameWithPath);
 
                 StringBuilder sb        = new StringBuilder();
-                Regex openCloseLineComment  = new Regex(@"\/\*.*\*\/", RegexOptions.Compiled);
+                /*
+                /* Here we are stripping out all the comments from the file
+                /* First we are looking for all single line comments that use the /* */
+                /*      notation to define the comment.
+                /* Next we look for all single line comments that use the // notation
+                /* As we remove the comments, we are also checking for empty lines, and if the line is empty after removing the comments, we simply skip adding it to the string builder
+                /* Lastly, we repeat the first search but this time we allow the modifier SingleLine
+                /*      meaning the search will lazily (because it has a '?' flag after it so it will stop at the first closing comment it finds).
+                /* Removing the comments is necessary as the comments could break the parsing
+                /*/
+                Regex openCloseLineComment  = new Regex(@"\/\*.*?\*\/", RegexOptions.Compiled);
                 Regex singleLineComment = new Regex(@"\/\/.*", RegexOptions.Compiled);
-                Regex multiLineComment = new Regex(@"\/\*.*\*\/", RegexOptions.Singleline | RegexOptions.Compiled);
+                Regex multiLineComment = new Regex(@"\/\*.*?\*\/", RegexOptions.Singleline | RegexOptions.Compiled);
                 foreach (string line in File.ReadLines(FileNameWithPath))
                 {
                     string commentRemoved = openCloseLineComment.Replace(line, "");
@@ -55,7 +65,8 @@ namespace LDF_FILEPARSER
                     if (string.IsNullOrWhiteSpace(commentRemoved.Trim(new char[] { ' ', '\r', '\n' }))) continue;
                     _ = sb.AppendLine(commentRemoved);
                 }
-
+                // Now with all the single line comments removed as well as empty lines, we can repeat the original search with an extra modifier to remove multi-line comments
+                // We do this separately rather than first just to be cautious and avoid getting unwanted matches 
                 FileParsedData = multiLineComment.Replace(sb.ToString(), "");
 
                 ExtractLINDescription();
@@ -103,7 +114,23 @@ namespace LDF_FILEPARSER
         }
 
         /// <summary>
-        /// Extracts the encodings.
+        /// Extracts the encodings defined in the Signal encoding types node
+        /// A signal encoding type must be defined as such:<br/><br/>
+        /// <code>
+        /// Signal-Encoding-Name {
+        ///     [physical_value | logical_value], Address, [arguments[, arguments]] "Description";
+        ///     ..
+        ///     [physical_value | logical_value], Address, [arguments[, arguments]] "Description";
+        /// }
+        /// </code>
+        /// A physical value must be defined as such:<br/><br/>
+        /// <code>
+        /// physical_value, Address, [arguments[, arguments]] "Description";
+        /// </code>
+        /// A logical value must be defined as such:<br/><br/>
+        /// <code>
+        /// logical_value, Address, "Description";
+        /// </code>
         /// </summary>
         /// <param name="signalEncodingsContent">Content of the signal encodings.</param>
         /// <exception cref="Exception">
@@ -122,7 +149,7 @@ namespace LDF_FILEPARSER
             }
 
             Regex encodingTypePattern     = new Regex(@"^\s*(([A-Z]\w+)\s*\x7B\s*(?:physical_value|logical_value).*?\x7D)", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled);
-            Regex physicalEncodingPattern = new Regex(@"^\s*(physical_value)\s*,\s*(\d+)\s*,\s*(?:0x)?([0-9A-F]{1,})\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*\x22([^\x22]+)\x22\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
+            Regex physicalEncodingPattern = new Regex(@"^\s*(physical_value)\s*,\s*(\d+)\s*,\s*((?:0x)?[0-9A-F]{1,})\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*\x22([^\x22]+)\x22\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
             Regex logicalEncodingPattern  = new Regex(@"^\s*(logical_value)\s*,\s*((?:0x)?[0-9A-F]{1,})\s*,\s*\x22([^\x22]+)\x22\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
 
             MatchCollection encodingNodes = encodingTypePattern.Matches(signalEncodingsContent);
@@ -198,7 +225,16 @@ namespace LDF_FILEPARSER
         }
 
         /// <summary>
-        /// Extracts the frames from the LDF File
+        /// Extracts the frames from the LDF File frame node<br/>
+        /// A frame must be defined as such:<br/><br/>
+        /// <code>
+        /// Frame-Name : ID, M, Some-ID, Length {
+        ///     Signal-Name-1, Signal-1-Index;
+        ///     Signal-Name-2, Signal-2-Index;
+        ///     ...
+        ///     Signal-Name-N, Signal-N-Index;
+        /// }
+        /// </code>
         /// </summary>
         /// <param name="framesContent">Content of the frames.</param>
         /// <exception cref="Exception">
@@ -315,11 +351,14 @@ namespace LDF_FILEPARSER
             }
         }
         /// <summary>
-        /// Extracts the signals from the LDF File
+        /// Extracts the signals from the LDF File signal node<br/>
+        /// A signal must be defined as such:<br/><br/>
+        /// <code>
+        /// Signal-Name : Size, InitialValue, Other-Data[, Other-Data-N]; 
+        /// </code>
         /// </summary>
         /// <param name="signalContent">Content of the signal.</param>
         /// <exception cref="ArgumentException">'{nameof(signalContent)}' cannot be null or empty. - signalContent</exception>
-        /// <exception cref="Exception"></exception>
         private void ExtractSignals(string signalContent)
         {
             if (string.IsNullOrEmpty(signalContent))
@@ -338,16 +377,82 @@ namespace LDF_FILEPARSER
                 // signal.Groups[1] - the signal name [the first backreference (first pair of parentheses)]
                 // signal.Groups[2] - the signal bit length [the second backreference (second pair of parentheses)]
                 // signal.Groups[3] - the signal initial value [the third backreference (third pair of parentheses)]
-                string signalName         = signal.Groups[1].Value.ToString();
-                string signalSize         = signal.Groups[2].Value.ToString();
-                string signalInitialValue = signal.Groups[3].Value.ToString();
+                string signalName           = signal.Groups[1].Value.ToString();
+                string signalSize           = signal.Groups[2].Value.ToString();
+                string signalInitialValue   = signal.Groups[3].Value.ToString();
                 string[] lineItemsSeparated = signal.Groups[0].Value.ToString().Trim(new char[] { ' ', '\r', '\n' }).Split(new char[] { ',', ';', ':', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
                 Signals.Add(signalName, new Signal(signalName, signalSize, signalInitialValue, lineItemsSeparated));
             }
         }
 
-        private string GetFrameNodeContent() => GetNodeContent(new Regex(@"^Frames.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s*(?:0x)?(?:[0-9A-F]{1,2}),\s*(?:\S+),\s*(?:\d+)\s*\x7B.*?\x7D){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
-        private string GetSignalNodeContent() => GetNodeContent(new Regex(@"^Signals.*?\x7B(?:\s*?(?:[A-Z]\w+):\s*(?:\d+),\s*(?:\d+),(?:\s*\S+,){1,}\s*\S+\s*;){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+        /// <summary>
+        /// <para>This method will return the Frames node from the ldf file.</para>
+        /// <para>
+        ///     We search the file using a regular expression where we look for the following conditions:<br/>
+        ///     The starting block needs to find a line that starts with the word 'Frames', this will be the key requirement for starting the match<br/>
+        ///     'Frames' needs to be followed by an opening brace '{' (char 123 or 0x7B in hex), there can be any amount of whitespace before/after the brace<br/>
+        ///     After the opening brace, there needs to be at least 1 frame defined<br/><br/>
+        ///     A frame must be defined as such:<br/><br/>
+        ///     <code>
+        ///     Frame-Name : ID, M, Some-ID, Length {
+        ///         Signal-Name-1, Signal-1-Index;
+        ///         Signal-Name-2, Signal-2-Index;
+        ///         ...
+        ///         Signal-Name-N, Signal-N-Index;
+        ///     }
+        ///     </code>
+        ///     Any amount of whitespace is permitted between any of the punctuation, however each signal must be on it's own separate line to be collected by the parser<br/>
+        ///     Lastly, it must have a closing brace (char 125 or 0x7D in hex), similarly any amount of whitespace can be present before the final brace
+        /// </para>
+        /// </summary>
+        /// <returns>Frame node content as a string</returns>
+        private string GetFrameNodeContent() => GetNodeContent(new Regex(@"^Frames.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s*(?:0x)?(?:[0-9A-F]{1,}),\s*(?:\S+),\s*(?:\d+)\s*\x7B.*?\x7D){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+
+        /// <summary>
+        /// <para>This method will return the Signals node from the ldf file.</para>
+        /// <para>
+        ///     We search the file using a regular expression where we look for the following conditions:<br/>
+        ///     The starting block needs to find a line that starts with the word 'Signals', this will be the key requirement for starting the match<br/>
+        ///     'Signals' needs to be followed by an opening brace '{' (char 123 or 0x7B in hex), there can be any amount of whitespace before/after the brace<br/>
+        ///     After the opening brace, there needs to be at least 1 signal defined<br/><br/>
+        ///     A signal must be defined as such:<br/><br/>
+        ///     <code>
+        ///     Signal-Name : Size, InitialValue, Other-Data[, Other-Data-N]; 
+        ///     </code>
+        ///     Any amount of whitespace is permitted between any of the punctuation, however each signal must be on it's own separate line to be collected by the parser<br/>
+        ///     Lastly, it must have a closing brace (char 125 or 0x7D in hex), similarly any amount of whitespace can be present before the final brace
+        /// </para>
+        /// </summary>
+        /// <returns>Signal node content as a string</returns>
+        private string GetSignalNodeContent() => GetNodeContent(new Regex(@"^Signals.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s*(?:\d+),\s*(?:\d+),(?:\s*\S+,){1,}\s*\S+\s*;){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+        /// <summary>
+        /// <para>This method will return the Signal encoding types node from the ldf file.</para>
+        /// <para>
+        ///     We search the file using a regular expression where we look for the following conditions:<br/>
+        ///     The starting block needs to find a line that starts with the word 'Signal_encoding_types', this will be the key requirement for starting the match<br/>
+        ///     'Signal_encoding_types' needs to be followed by an opening brace '{' (char 123 or 0x7B in hex), there can be any amount of whitespace before/after the brace<br/>
+        ///     After the opening brace, there needs to be at least 1 signal defined<br/><br/>
+        ///     A signal encoding type must be defined as such:<br/><br/>
+        ///     <code>
+        ///     Signal-Encoding-Name {
+        ///         [physical_value | logical_value], Address, [arguments[, arguments]] "Description";
+        ///         ..
+        ///         [physical_value | logical_value], Address, [arguments[, arguments]] "Description";
+        ///     }
+        ///     </code>
+        ///     A physical value must be defined as such:<br/><br/>
+        ///     <code>
+        ///     physical_value, Address, [arguments[, arguments]] "Description";
+        ///     </code>
+        ///     A logical value must be defined as such:<br/><br/>
+        ///     <code>
+        ///     logical_value, Address, "Description";
+        ///     </code>
+        ///     Any amount of whitespace is permitted between any of the punctuation, however each signal encoding must be on it's own separate line to be collected by the parser<br/>
+        ///     Lastly, it must have a closing brace (char 125 or 0x7D in hex), similarly any amount of whitespace can be present before the final brace
+        /// </para>
+        /// </summary>
+        /// <returns>Signal node content as a string</returns>
         private string GetSignalEncodingNodeContent() => GetNodeContent(new Regex(@"^Signal_encoding_types.*?\x7B(?:\s*?[A-Z]\w+\s*\x7B.*?\x7D){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
         private string GetSignalRepresentationNodeContent() => GetNodeContent(new Regex(@"^Signal_representation.*?\x7B.*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
 
