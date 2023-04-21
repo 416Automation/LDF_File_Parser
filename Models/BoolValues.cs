@@ -19,34 +19,26 @@ namespace LDF_FILEPARSER
             get => _valueBool;
             set
             {
-                if (_valueBool != value)
+                if (_valueBool == value) return;
                 {
                     _valueBool = value;
                     PerformBooleanToInt?.Invoke(this, null);
-                    NotifyPropertyChanged();
                 }
             }
         }
 
-        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         public event EventHandler PerformBooleanToInt;
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public override string ToString()
-        {
-            return $"Placeholder: {Placeholder}, Enabled: {Enabled}";
-        }
+        public override string ToString() => $"Placeholder: {Placeholder}, Enabled: {Enabled}";
 
         public BoolValues(int placeholder, bool enabled = false, bool value = false)
         {
             Placeholder = placeholder;
-            Enabled = enabled;
-            Value = value;
+            Enabled     = enabled;
+            Value       = value;
         }
-
     }
 }

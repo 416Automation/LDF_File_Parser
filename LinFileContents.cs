@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace LDF_FILEPARSER
@@ -14,26 +15,20 @@ namespace LDF_FILEPARSER
     public class LinFileContents : INotifyPropertyChanged
     {
         public IDictionary<string, EncodingNode> Encodings { get; set; } = new Dictionary<string, EncodingNode>();
-
         public string FileName { get; private set; } = string.Empty;
-
         public string FileNameWithPath { get; private set; } = string.Empty;
-
         public string FileRawData { get; }
-
+        public string FileParsedData { get; }
         public ICollection<Frame> Frames { get; set; } = new HashSet<Frame>();
-
         public string LanguageVersion { get; set; }
         public string ProtocolVersion { get; set; }
         public IDictionary<string, Signal> Signals { get; set; } = new Dictionary<string, Signal>();
         public string Speed { get; set; }
 
-
         public LinFileContents(string fileNameWithPath)
         {
             if (string.IsNullOrEmpty(fileNameWithPath))
                 throw new ArgumentException($"'{nameof(fileNameWithPath)}' cannot be null or empty.", nameof(fileNameWithPath));
-
 
             // Check for MIME type too 
             var isExtensionValid = Path.GetExtension(fileNameWithPath) == ".ldf";
@@ -46,27 +41,28 @@ namespace LDF_FILEPARSER
             try
             {
                 FileNameWithPath = fileNameWithPath;
-
                 FileName = Path.GetFileName(FileNameWithPath);
-
                 FileRawData = File.ReadAllText(FileNameWithPath);
 
-                StringReader test2 = new StringReader(FileRawData);
+                StringBuilder sb        = new StringBuilder();
+                Regex openCloseLineComment  = new Regex(@"\/\*.*\*\/", RegexOptions.Compiled);
+                Regex singleLineComment = new Regex(@"\/\/.*", RegexOptions.Compiled);
+                Regex multiLineComment = new Regex(@"\/\*.*\*\/", RegexOptions.Singleline | RegexOptions.Compiled);
+                foreach (string line in File.ReadLines(FileNameWithPath))
+                {
+                    string commentRemoved = openCloseLineComment.Replace(line, "");
+                    commentRemoved        = singleLineComment.Replace(commentRemoved, "");
+                    if (string.IsNullOrWhiteSpace(commentRemoved.Trim(new char[] { ' ', '\r', '\n' }))) continue;
+                    _ = sb.AppendLine(commentRemoved);
+                }
+
+                FileParsedData = multiLineComment.Replace(sb.ToString(), "");
 
                 ExtractLINDescription();
-
-                var signalContent = GetNodeContent(NodeNames.Signals);
-                ExtractSignals(signalContent);
-
-                var framesContent = GetNodeContent(NodeNames.Frames);
-                ExtractFrames(framesContent);
-
-                var signalEncodingsContent = GetNodeContent(NodeNames.SignalEncodingTypes);
-                ExtractEncodings(signalEncodingsContent);
-
-                var signalEncodingRepresentation = GetNodeContent(NodeNames.SignalRepresentation);
-                ExtractEncodingsRepresentation(signalEncodingRepresentation);
-
+                ExtractSignals(GetSignalNodeContent());
+                ExtractFrames(GetFrameNodeContent());
+                ExtractEncodings(GetSignalEncodingNodeContent());
+                ExtractEncodingsRepresentation(GetSignalRepresentationNodeContent());
 
                 foreach ((int largestSizeOfSignal, Signal signal, Frame frame) in from item in Frames
                                                                                   let largestSizeOfSignal = item.Signals.Max(s => s.Size)
@@ -97,13 +93,7 @@ namespace LDF_FILEPARSER
             try
             {
                 var result = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
-
-                if (IsSpeed)
-                {
-                    return result[index] + CharSymbol.WhiteSpace + result[3];
-                }
-
-                return result[index];
+                return result[index] + (IsSpeed ? + CharSymbol.WhiteSpace + result[3] : string.Empty);
             }
             catch (Exception exc)
             {
@@ -125,105 +115,44 @@ namespace LDF_FILEPARSER
         private void ExtractEncodings(string signalEncodingsContent)
         {
 
-            // There can be cases where there are no encodings mentioned in the LDF File
-            if (string.IsNullOrEmpty(signalEncodingsContent))
+            if (string.IsNullOrWhiteSpace(signalEncodingsContent))
             {
                 Logger.LogWarning($"{FileName} does not consist any Encodings at {FileNameWithPath}");
                 return;
             }
 
-            // Finds the string with end "{" and multiple whitespaces in front (Used for parsing the name and other description of frame)
-            var encodingMatchingExpression = @"^\s+.*{";
+            Regex encodingTypePattern     = new Regex(@"^\s*(([A-Z]\w+)\s*\x7B\s*(?:physical_value|logical_value).*?\x7D)", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled);
+            Regex physicalEncodingPattern = new Regex(@"^\s*(physical_value)\s*,\s*(\d+)\s*,\s*(?:0x)?([0-9A-F]{1,})\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*\x22([^\x22]+)\x22\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
+            Regex logicalEncodingPattern  = new Regex(@"^\s*(logical_value)\s*,\s*((?:0x)?[0-9A-F]{1,})\s*,\s*\x22([^\x22]+)\x22\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
 
-            // Finds the string with end "}" and multiple whitespaces in front (Used for parsing the end of frame)
-            var bracketMatchingExpression = @"^\s+\}";
-
-            // Finds the individual encoding values from encodings (Keep in mind , these are defined in lower characters)
-            var encodingValueMatchingExpression = @"^\s+[a-z].*\;";
-
-            var encodingMatchingRegex = new Regex(encodingMatchingExpression, RegexOptions.Multiline);
-            var bracketMatchingRegex = new Regex(bracketMatchingExpression, RegexOptions.Multiline);
-            var encodingValueMatchRegex = new Regex(encodingValueMatchingExpression, RegexOptions.Multiline);
-
-            var encodingGroup = encodingMatchingRegex.Matches(signalEncodingsContent);
-            var bracketmatches = bracketMatchingRegex.Matches(signalEncodingsContent);
-
-
-            // The number of encoding names and their node end brackets should be same in number to loop through them
-            if (encodingGroup.Count != bracketmatches.Count)
+            MatchCollection encodingNodes = encodingTypePattern.Matches(signalEncodingsContent);
+            foreach (Match encodingNode in encodingNodes)
             {
-                // TODO see if you can throw an exception
-                throw new BracketMatchException($"Number of encoding names and their node endings do not match at {nameof(ExtractEncodings)}");
-            }
+                string encodingName = encodingNode.Groups[2].Value.ToString();
+                EncodingNode encoding = new EncodingNode(encodingName);
 
-            // As the matches are linear and the count are same, 
-            for (int i = 0; i < encodingGroup.Count; i++)
-            {
-                var encodingStart = encodingGroup[i].Index;
-                var encodingEnd = bracketmatches[i].Index;
-
-                // We are parsing the {GS_PosRq} out of the string hence the array will consist of only one element
-                //     GS_PosRq {
-                var encodingNameArray = encodingGroup[i].Value.Split(new char[] { CharSymbol.TabSpace, CharSymbol.WhiteSpace, '{' }, StringSplitOptions.RemoveEmptyEntries);
-
-                // The encoding name array should contain only one name of the encoding, hence the length should not be more than one
-                if (encodingNameArray.Length > 1)
+                MatchCollection physEncodingMatches = physicalEncodingPattern.Matches(encodingNode.Value);
+                foreach (Match physicalMatch in physEncodingMatches)
                 {
-                    // throw invalid
-                    // as encodingNameArray cant have more values
-                    throw new InvalidDataException($"After parsing the encoding group, the array should contain only one element which is the name. Array elements: {encodingNameArray.Join()}, Count: {encodingNameArray.Length}");
+                    string address = physicalMatch.Groups[2].Value.ToString().ConvertToHex();
+                    PhysicalEncodingValue physicalEncoding = new PhysicalEncodingValue(address);
+                    int i = 3;
+                    for (; i < physicalMatch.Groups.Count - 1; i++)
+                        physicalEncoding.Values.Add(physicalMatch.Groups[i].Value.ToString());
+                    physicalEncoding.Description = physicalMatch.Groups[i].Value.ToString();
+                    encoding.EncodingTypes.Add(physicalEncoding);
+                }
+                MatchCollection logicEncodingMatches = logicalEncodingPattern.Matches(encodingNode.Value);
+                foreach (Match logicalMatch in logicEncodingMatches)
+                {
+                    string address = logicalMatch.Groups[2].Value.ToString();
+                    if (address.StartsWith("0x") == false)
+                        address = address.ConvertToHex();
+                    string description = logicalMatch.Groups[3].Value.ToString();
+                    encoding.EncodingTypes.Add(new LogicalEncodingValue(address, description));
                 }
 
-                string encodingName = encodingNameArray.First();
-
-                // Substring the descriptions of the signals mentioned in the parsed encoding
-                var encodingValues = signalEncodingsContent.Substring(encodingStart, (encodingEnd - encodingStart) + 1);
-
-                var encodingValueMatches = encodingValueMatchRegex.Matches(encodingValues);
-
-                var encodingNode = new EncodingNode(encodingName);
-                foreach (var encodingValue in from Match signalmatch in encodingValueMatches
-                                              let encodingValue = signalmatch.Value.Split(new char[] { ',', ';', CharSymbol.TabSpace, CharSymbol.WhiteSpace, '\"' }, StringSplitOptions.RemoveEmptyEntries)
-                                              select encodingValue)
-                {
-
-                    // EncodingValue should have at least three values 
-                    // TODO type of encoding, hex address , description
-                    if (encodingValue.Length < 3)
-                        throw new InvalidDataException($"After parsing the encoding values, the array should contain atleast 3 elememts (Encoding type, Hex address, Description). Array elements: {encodingValue.Join()}, Count: {encodingValue.Length}");
-
-                    // the first description is the type of encoding value
-                    var encodingValueType = encodingValue[0];
-
-                    // the second description is the hex address
-                    var encodingValueAddress = encodingValue[1].ConvertToHex();
-
-                    // Check if the encoding type is logical / physical 
-                    if (string.Equals(encodingValueType, EncodingValueType.Logical))
-                    {
-                        string encodingDescription = encodingValue[2].Trim(CharSymbol.TabSpace, CharSymbol.WhiteSpace, '"', '\"');
-                        encodingNode.EncodingTypes.Add(new LogicalEncodingValue(encodingValueAddress, encodingDescription));
-                    }
-                    else if (string.Equals(encodingValueType, EncodingValueType.Physical))
-                    {
-                        PhyscialEncodingValue physicalEncoding = new PhyscialEncodingValue(encodingValueAddress);
-
-                        // TODO I am not sure of what the other physical encoding values represent, hence storing them in a list of strings
-                        // In future need to get rid of it 
-                        // Skip 2 because the first value is name and the second value is hex address for all the encoding value
-                        foreach (var unknownValue in encodingValue.Skip(2))
-                            physicalEncoding.Values.Add(unknownValue);
-
-                        encodingNode.EncodingTypes.Add(physicalEncoding);
-                    }
-                    else
-                    {
-                        // Invalid Encoding type, let the user know in logs
-                        // Should never be the case as long as something new is added
-                        throw new InvalidEncodingTypeException($"Encoding type: {encodingValueType} is invalid, the defined encodings are: {EncodingValueType.Physical}, {EncodingValueType.Logical}");
-                    }
-                }
-                Encodings.Add(encodingName, encodingNode);
+                Encodings.Add(encodingName, encoding);
             }
         }
 
@@ -244,45 +173,27 @@ namespace LDF_FILEPARSER
                 return;
             }
 
-            var encodingMatchingExpression = @"^\s+[A-Z].*\;";
-
-            var encodingMatchRegex = new Regex(encodingMatchingExpression, RegexOptions.Multiline);
-
-            var encodingRepresentations = encodingMatchRegex.Matches(signalEncodingRepresentation);
-
-            foreach (var encodingMatchArray in from Match encodingMatch in encodingRepresentations
-                                               let encodingMatchArray = encodingMatch.Value.Split(new char[] { CharSymbol.TabSpace, ';', ',', ':' }, StringSplitOptions.RemoveEmptyEntries)
-                                               select encodingMatchArray)
+            Regex encodingRepresentationPattern = new Regex(@"^\s*([A-Z]\w+)\s*:\s*((?:.+?(?:,\s*|;)){1,})", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled);
+            MatchCollection encodingRepresentationMatches = encodingRepresentationPattern.Matches(signalEncodingRepresentation);
+            char[] whiteSpaces = new char[] { ' ', '\r', '\n' };
+            foreach (Match encodingRepresentation in encodingRepresentationMatches)
             {
-                if (encodingMatchArray.Length < 2)
-                {
-                    // TODO the matching array should atleast have two element , first is the name of encoding and the second or the rest should be the signals it belongs to
-                    throw new InvalidDataException($"After parsing the encoding matches, the array should contain atleast 2 elememts (Name , Signal linked to). Array elements: {encodingMatchArray.Join()}, Count: {encodingMatchArray.Length}");
-                }
-
-                string encodingName = encodingMatchArray[0].Trim(CharSymbol.WhiteSpace, CharSymbol.TabSpace);
+                string encodingName = encodingRepresentation.Groups[1].Value.ToString();
                 if (Encodings.TryGetValue(encodingName, out EncodingNode encodingNode))
                 {
-                    foreach (string signalNameValue in encodingMatchArray.Skip(1))
+                    string[] signalNames = encodingRepresentation.Groups[2].Value.ToString().Split(',');
+                    foreach (string signalName in signalNames)
                     {
-                        var signalName = signalNameValue.Trim(CharSymbol.WhiteSpace);
-
-                        if (Signals.TryGetValue(signalName, out Signal signal))
+                        if (Signals.TryGetValue(signalName.Trim(whiteSpaces), out Signal signal))
                         {
                             signal.UpdateEncoding(encodingNode);
                         }
                         else
-                        {
-                            // TODO throw because you were not able to detect any signals present
-                            throw new SignalNotFoundException($"Signal named - {signalName} not found from the given signals in LDF file in the func {nameof(ExtractEncodingsRepresentation)}; List of signals: {Signals.Select(s => s.Value.Name).Join()}");
-                        }
+                            Logger.LogWarning($"Encoding signal '{signalName}' not found in list of signals");
                     }
                 }
                 else
-                {
-                    // TODO throw because you were not able to detect any encoding names
-                    throw new EncodingNameNotFoundException($"Encoding Name: {encodingName} , not found in the list of encodings defined at {nameof(ExtractEncodingsRepresentation)}();");
-                }
+                    Logger.LogWarning($"Encoding '{encodingName}' not found in list of encodings");
             }
         }
 
@@ -294,63 +205,39 @@ namespace LDF_FILEPARSER
         /// </exception>
         private void ExtractFrames(string framesContent)
         {
-            // Finds the string with end "{" and multiple whitespaces in front (Used for parsing the name and other description of frame)
-            var frameMatchingExpression = @"^\s+.*{";
+            Regex framePattern = new Regex(@"^\s*([A-Z]\w+)\s*:\s*((?:0x)?[0-9A-F]{1,2}),\s*(\S+),\s*(\d+)\s*\x7B.*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled);
+            Regex frameSignalPattern = new Regex(@"^\s*([A-Z]\w+),\s*(\d+)\s*;\s*?", RegexOptions.Multiline | RegexOptions.Compiled);
 
-            // Finds the string with end "}" and multiple whitespaces in front (Used for parsing the end of frame)
-            var bracketMatchingExpression = @"^\s+\}";
+            MatchCollection frames = framePattern.Matches(framesContent);
+            if (frames.Count == 0) throw new InvalidDataException("Unable to locate any frame definitions from extracted content");
 
-            // Finds the individual signals inside each frame
-            var signalMatchingExpression = @"^\s+[A-Z].*\;";
-
-            var frameMatchingRegex = new Regex(frameMatchingExpression, RegexOptions.Multiline);
-            var bracketMatchingRegex = new Regex(bracketMatchingExpression, RegexOptions.Multiline);
-            var signalMatchRegex = new Regex(signalMatchingExpression, RegexOptions.Multiline);
-
-            var frameGroup = frameMatchingRegex.Matches(framesContent);
-            var bracketmatches = bracketMatchingRegex.Matches(framesContent);
-
-
-            if (frameGroup.Count != bracketmatches.Count)
+            foreach (Match foundFrame in frames)
             {
-                // The count should be the same , as the count defines the number of frames present in the file
-                throw new BracketMatchException($"Number of frames and their node endings do not match at {nameof(ExtractFrames)}");
-            }
+                string frameName             = foundFrame.Groups[1].Value.ToString();
+                string frameID               = foundFrame.Groups[2].Value.ToString();
+                string frameLength           = foundFrame.Groups[4].Value.ToString();
 
-            // As the matches are linear and the count are same, 
-            for (int i = 0; i < frameGroup.Count; i++)
-            {
-                var frameStart = frameGroup[i].Index;
-                var frameEnd = bracketmatches[i].Index;
+                if (int.TryParse(frameLength, out int length) == false)
+                    throw new Exception($"Frame {frameName} has an invalid frame length: {frameLength}");
 
-                var frameDescription = frameGroup[i].Value.Split(new char[] { ':', '{', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                Frame frame = new Frame(frameName, frameID, length);
 
-                string frameName = frameDescription[0].Trim(CharSymbol.WhiteSpace, CharSymbol.TabSpace);
-
-                Frame frame = new Frame(frameName, frameDescription[1], int.Parse(frameDescription[3]));
-
-                var signalString = framesContent.Substring(frameStart, (frameEnd - frameStart) + 1);
-
-                var signalMatches = signalMatchRegex.Matches(signalString);
-
-                foreach (var (signalValues, signalName) in from Match signalmatch in signalMatches
-                                                           let signalValues = signalmatch.Value.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                                                           let signalName = signalValues.First().Trim(CharSymbol.WhiteSpace, CharSymbol.TabSpace)
-                                                           select (signalValues, signalName))
+                MatchCollection frameSignals = frameSignalPattern.Matches(foundFrame.Value);
+                foreach (Match frameSignal in frameSignals)
                 {
+                    string signalName       = frameSignal.Groups[1].Value.ToString();
+                    string signalStartIndex = frameSignal.Groups[2].Value.ToString();
                     if (Signals.TryGetValue(signalName, out Signal signal))
                     {
-                        signal.StartAddress = int.Parse(signalValues[1]);
+                        if (int.TryParse(signalStartIndex, out int signalIndex) == false)
+                            throw new Exception($"Signal {signalName} has an invalid starting index: {signalStartIndex}");
+
+                        signal.StartAddress = signalIndex;
                         frame.Signals.Add(signal);
-                        continue;
                     }
                     else
-                    {
-                        // throw because you were not able to detect any signals present
-                        throw new SignalNotFoundException($"Signal named - {signalName} not found from the given signals in LDF file in the func {nameof(ExtractFrames)}; List of signals: {Signals.Select(s => s.Value.Name).Join()}");
-                    }
+                        throw new SignalNotFoundException($"Signal named {signalName} is not found from the parsed data of the LDF file");
                 }
-
                 ConfigureNoDataBits(frame);
                 frame.Signals = frame.Signals.OrderBy(s => s.StartAddress).ToList();
                 Frames.Add(frame);
@@ -381,7 +268,6 @@ namespace LDF_FILEPARSER
                         continue;
                     }
 
-
                     // tell the signal has no use data bits after
 
                     frame.Signals[i].HasNoUseDataBitsAfter = true;
@@ -402,9 +288,7 @@ namespace LDF_FILEPARSER
             bool languageVersionFound = false;
             bool speedFound = false;
 
-
-
-            foreach (var newline in FileRawData.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (var newline in FileParsedData.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
             {
                 if (newline.Contains(NodeNames.ProtocolVersion))
                 {
@@ -417,14 +301,14 @@ namespace LDF_FILEPARSER
                     LanguageVersion = ExtractLINDescription(newline, 2);
                     languageVersionFound = true;
                 }
-
                 else if (newline.Contains(NodeNames.Speed))
                 {
                     var test = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
                     Speed = ExtractLINDescription(newline, 2, true);
                     speedFound = true;
                 }
-                else if (protocolVersionFound && languageVersionFound && speedFound)
+                
+                if (protocolVersionFound && languageVersionFound && speedFound)
                 {
                     break;
                 }
@@ -441,54 +325,40 @@ namespace LDF_FILEPARSER
             if (string.IsNullOrEmpty(signalContent))
                 throw new ArgumentException($"'{nameof(signalContent)}' cannot be null or empty.", nameof(signalContent));
 
-            var allsignals = new Regex(@"^\s+[A-Z].*", RegexOptions.Multiline);
+            var allsignals = new Regex(@"^\s*([A-Z]\w+):\s*(\d+),\s*(\d+),(?:\s*\S+,){1,}\s*\S+\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
 
-            MatchCollection signalValue = allsignals.Matches(signalContent);
+            MatchCollection signals = allsignals.Matches(signalContent);
+            if (signals.Count == 0) throw new InvalidDataException("Unable to locate any signal definitions from extracted content");
 
-            foreach (var signalArray in from Match item in signalValue
-                                        let signalArray = item.Value.Split(new char[] { ',', ';', ':', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                                        select signalArray)
+            foreach (Match signal in signals)
             {
-                if (signalArray.Length < 3)
-                {
-                    //TODO the extracted signal string must have atleast three values , {Name, size, initial value}
-                    throw new InvalidDataException($"After parsing the signal matches, the array should contain atleast 3 elememts (Name, size, Initial value). Array elements: {signalArray.Join()}, Count: {signalArray.Length}");
-                }
+                if (signal.Success == false) throw new InvalidDataException($"Signal does not match expected format");
 
-                string signalName = signalArray[0].Trim(CharSymbol.WhiteSpace, CharSymbol.TabSpace);
-                Signals.Add(signalName, new Signal(signalName, signalArray[1], signalArray[2], signalArray));
+                // signal.Groups[0] - the entire line that matched
+                // signal.Groups[1] - the signal name [the first backreference (first pair of parentheses)]
+                // signal.Groups[2] - the signal bit length [the second backreference (second pair of parentheses)]
+                // signal.Groups[3] - the signal initial value [the third backreference (third pair of parentheses)]
+                string signalName         = signal.Groups[1].Value.ToString();
+                string signalSize         = signal.Groups[2].Value.ToString();
+                string signalInitialValue = signal.Groups[3].Value.ToString();
+                string[] lineItemsSeparated = signal.Groups[0].Value.ToString().Trim(new char[] { ' ', '\r', '\n' }).Split(new char[] { ',', ';', ':', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+                Signals.Add(signalName, new Signal(signalName, signalSize, signalInitialValue, lineItemsSeparated));
             }
         }
 
-        /// <summary>
-        /// Gets the content of the node from the LDF file in a string format
-        /// </summary>
-        /// <param name="nameOfNode">The name of node.</param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException">'{nameof(nameOfNode)}' cannot be null or whitespace. - nameOfNode</exception>
-        /// <exception cref="Exception"></exception>
-        private string GetNodeContent(string nameOfNode)
+        private string GetFrameNodeContent() => GetNodeContent(new Regex(@"^Frames.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s*(?:0x)?(?:[0-9A-F]{1,2}),\s*(?:\S+),\s*(?:\d+)\s*\x7B.*?\x7D){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+        private string GetSignalNodeContent() => GetNodeContent(new Regex(@"^Signals.*?\x7B(?:\s*?(?:[A-Z]\w+):\s*(?:\d+),\s*(?:\d+),(?:\s*\S+,){1,}\s*\S+\s*;){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+        private string GetSignalEncodingNodeContent() => GetNodeContent(new Regex(@"^Signal_encoding_types.*?\x7B(?:\s*?[A-Z]\w+\s*\x7B.*?\x7D){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+        private string GetSignalRepresentationNodeContent() => GetNodeContent(new Regex(@"^Signal_representation.*?\x7B.*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+
+        private string GetNodeContent(Regex nodePattern, bool mustExist = true, [CallerMemberName] string caller = null)
         {
-            if (string.IsNullOrWhiteSpace(nameOfNode))
-                throw new ArgumentException($"'{nameof(nameOfNode)}' cannot be null or whitespace.", nameof(nameOfNode));
-
-            var regexString = @"^(?<Name>(nameOfNode).*)\s+\{";
-
-            regexString = Regex.Replace(regexString, "(nameOfNode)", nameOfNode);
-
-            var nameMatchingExpression = new Regex(regexString, RegexOptions.Multiline);
-            var brackeMatchingExpression = new Regex(@"^\}", RegexOptions.Multiline);
-            var matches = nameMatchingExpression.Matches(FileRawData);
-
+            Match match = nodePattern.Match(FileParsedData);
             string nodeContent = string.Empty;
-            foreach (var contents in from Match match in matches
-                                     let m = brackeMatchingExpression.Match(FileRawData, match.Index)
-                                     let contents = FileRawData.Substring(match.Index, (m.Index - match.Index) + 1)
-                                     select contents)
-            {
-                nodeContent = contents + Environment.NewLine;
-            }
-
+            if (match.Success == false && mustExist)
+                throw new InvalidDataException($"Unable to locate desired content ({caller})");
+            else if (match.Success == true)
+                nodeContent = match.Value;
             return nodeContent;
         }
 

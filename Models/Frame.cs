@@ -12,32 +12,10 @@ namespace LDF_FILEPARSER
 {
     public class Frame : INotifyPropertyChanged
     {
-        private string _linDisplayMessage = $"ID     : 0x00" + Environment.NewLine + "Data : 0x00";
-        private byte[] _linMessage = new byte[] { 0, 0, 0, 0 };
         public string ID { get; set; }
+        public string LinDisplayMessage { get; set; } = $"ID     : 0x00" + Environment.NewLine + "Data : 0x00";
 
-        public string LinDisplayMessage
-        {
-            get => _linDisplayMessage; set
-            {
-                if (_linDisplayMessage != value)
-                {
-                    _linDisplayMessage = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        public byte[] LinMessage
-        {
-            get => _linMessage; set
-            {
-                if (_linMessage != value)
-                {
-                    _linMessage = value;
-                }
-            }
-        }
+        public byte[] LinMessage { get; set; }
 
         public string Name { get; set; }
 
@@ -56,7 +34,9 @@ namespace LDF_FILEPARSER
             #endregion
 
             Name = name;
-            ID = iD.ConvertToHex();
+            ID = iD.ToUpper();
+            if (ID.StartsWith("0X")) ID = ID.Replace('X', 'x');
+            if (ID.StartsWith("0x") == false) ID = ID.ConvertToHex();
             ResponseLength = responseLength;
 
             LinDisplayMessage = $"ID     : {ID}" + Environment.NewLine + "Data : 0x00";
@@ -122,9 +102,6 @@ namespace LDF_FILEPARSER
 
         public override string ToString() => $"Name: {Name} - ID: {ID}";
 
-        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

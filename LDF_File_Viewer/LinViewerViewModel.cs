@@ -4,6 +4,7 @@ using LDF_FILEPARSER;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows;
 
@@ -11,49 +12,10 @@ namespace LDF_File_Viewer
 {
     public class LinViewerViewModel : INotifyPropertyChanged
     {
-        private ObservableCollection<Frame> _frames;
-        private LinFileContents _linFileContent;
-        private Frame _selectedFrame;
-
         public RelayCommand<string> Browse { get; set; }
-        public ObservableCollection<Frame> Frames
-        {
-            get => _frames; set
-            {
-                if (_frames != value)
-                {
-                    _frames = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        public LinFileContents LinFileContent
-        {
-            get => _linFileContent;
-            set
-            {
-                if (_linFileContent != value)
-                {
-                    _linFileContent = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-
-        public Frame SelectedFrame
-        {
-            get => _selectedFrame; set
-            {
-                if (_selectedFrame != value)
-                {
-                    _selectedFrame = value;
-                    NotifyPropertyChanged();
-
-                }
-            }
-        }
-
+        public ObservableCollection<Frame> Frames { get; set; }
+        public LinFileContents LinFileContent { get; set; }
+        public Frame SelectedFrame { get; set; }
         public RelayCommand<Signal> SelectedSignal { get; set; }
 
         /// <summary>
@@ -87,6 +49,7 @@ namespace LDF_File_Viewer
             }
             catch (Exception exc)
             {
+                if (Debugger.IsAttached) Debugger.Break();
                 Logger.LogError(exc);
                 MessageBox.Show(exc.ToString(), "File loading error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -95,11 +58,7 @@ namespace LDF_File_Viewer
         // This method is called by the Set accessors of each property.  
         // The CallerMemberName attribute that is applied to the optional propertyName  
         // parameter causes the property name of the caller to be substituted as an argument.  
-        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
+        protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         private void SelectedSignalTest(Signal signal)
         {
@@ -116,7 +75,7 @@ namespace LDF_File_Viewer
 
             signalValueUserControl.Window = window;
             window.ShowDialog();
-            _selectedFrame.ConvertToByteArray();
+            SelectedFrame.ConvertToByteArray();
         }
     }
 }

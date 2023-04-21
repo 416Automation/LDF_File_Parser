@@ -13,7 +13,6 @@ namespace LDF_FILEPARSER
     {
         private string _hexValue = "0x00";
         private int _integerValue = 0;
-        private bool _valueNotInRange = false;
         private IEncodingValue _selectedEncoding;
 
         public ICollection<BoolValues> BooleanValues { get; set; }
@@ -25,62 +24,53 @@ namespace LDF_FILEPARSER
             get => _selectedEncoding;
             set
             {
-                if (_selectedEncoding != value)
-                {
-                    _selectedEncoding = value;
-                    HexValue = _selectedEncoding.HexAddress;
-                    IntegerValue = Convert.ToInt32(HexValue, 16);
-                    NotifyPropertyChanged();
-                }
+                if (_selectedEncoding == value) return;
+                _selectedEncoding = value;
+                HexValue = _selectedEncoding.HexAddress;
+                IntegerValue = Convert.ToInt32(HexValue, 16);
             }
         }
 
         public Frame Frame { get; private set; }
         public string HexValue
         {
-            get => _hexValue; set
+            get => _hexValue; 
+            set
             {
-                if (_hexValue != value)
-                {
-                    _hexValue = value;
-                    IntegerValue = Convert.ToInt32(_hexValue, 16);
-                    ConvertBooleanArray(IntegerValue);
+                if (_hexValue == value) return;
+                _hexValue = value;
+                
+                IntegerValue = Convert.ToInt32(_hexValue, 16);
+                ConvertBooleanArray(IntegerValue);
 
-                    var foundEncoding = Encoding?.EncodingTypes.First(s => string.Equals(s.HexAddress, _hexValue));
-
-                    if (foundEncoding != null)
-                        SelectedEncoding = foundEncoding;
-
-                    NotifyPropertyChanged();
-                }
+                var foundEncoding = Encoding?.EncodingTypes.First(s => string.Equals(s.HexAddress, _hexValue));
+                if (foundEncoding != null) SelectedEncoding = foundEncoding;
             }
         }
 
         public string InitalValue { get; private set; }
         public int IntegerValue
         {
-            get => _integerValue; set
+            get => _integerValue; 
+            set
             {
-                if (_integerValue != value)
+                if (_integerValue == value) return;
+                if (value > MaxValue)
                 {
-                    if (value > MaxValue)
-                    {
-                        IntegerValueOutOfRange?.Invoke(this, value);
-                        _integerValue = 0;
-                        ValueNotInRange = true;
-                    }
-                    else
-                    {
-                        _integerValue = value;
-                        ValueNotInRange = false;
-
-                    }
-
-                    HexValue = _integerValue.ToString().ConvertToHex();
-                    ConvertBooleanArray(_integerValue);
-                    Frame?.ConvertToByteArray();
-                    NotifyPropertyChanged();
+                    IntegerValueOutOfRange?.Invoke(this, value);
+                    _integerValue = 0;
+                    ValueNotInRange = true;
                 }
+                else
+                {
+                    _integerValue = value;
+                    ValueNotInRange = false;
+
+                }
+
+                HexValue = _integerValue.ToString().ConvertToHex();
+                ConvertBooleanArray(_integerValue);
+                Frame?.ConvertToByteArray();
             }
         }
 
@@ -91,25 +81,11 @@ namespace LDF_FILEPARSER
         public RelayCommand SelectAll { get; set; }
         public int Size { get; private set; }
         public int StartAddress { get; set; }
-        public bool ValueNotInRange
-        {
-            get => _valueNotInRange; private set
-            {
-                if (_valueNotInRange != value)
-                {
-                    _valueNotInRange = value;
-                    NotifyPropertyChanged();
-                }
-            }
-        }
-        private bool ConvertingBooleanArray { get; set; } = false;
-
-        private bool IntegerValueChanging { get; set; } = false;
-
-        public bool HasNoUseDataBitsAfter { get; set; } = false;
-
-        public int NumberOfUseDataBits { get; set; } = 0;
-
+        public bool ValueNotInRange { get; set; }
+        private bool ConvertingBooleanArray { get; set; }
+        private bool IntegerValueChanging { get; set; }
+        public bool HasNoUseDataBitsAfter { get; set; }
+        public int NumberOfUseDataBits { get; set; }
 
         public Signal(string name, int size, string initalValue, string[] rawSignalValues = null)
         {
@@ -135,9 +111,6 @@ namespace LDF_FILEPARSER
 
         public Signal(string name, string size, string initalValue, string[] rawSignalValues = null) : this(name, int.Parse(size), initalValue, rawSignalValues)
         {
-
-
-
         }
 
         public event EventHandler<int> IntegerValueOutOfRange;
@@ -151,10 +124,8 @@ namespace LDF_FILEPARSER
             if (frame is null)
                 throw new ArgumentNullException(nameof(frame));
 
-            Frame = frame;
-
+            Frame         = frame;
             BooleanValues = new ObservableCollection<BoolValues>();
-
 
             /// Three things need to achieve
             /// Make a Boolean Values or the max size
@@ -178,7 +149,6 @@ namespace LDF_FILEPARSER
                     {
                         bit.InUse = false;
                     }
-
                 }
                 else
                 {
@@ -259,11 +229,7 @@ namespace LDF_FILEPARSER
             ConvertingBooleanArray = false;
         }
 
-        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
+        protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         private void SelectAllPressed() => IntegerValue = MaxValue;
     }
 }
