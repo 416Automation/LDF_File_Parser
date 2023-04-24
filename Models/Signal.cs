@@ -89,15 +89,8 @@ namespace LDF_FILEPARSER
 
         public Signal(string name, int size, string initalValue, string[] rawSignalValues = null)
         {
-            #region Parameter Validation
-            if (string.IsNullOrEmpty(name))
-                throw new ArgumentException($"'{nameof(name)}' cannot be null or empty.", nameof(name));
-
-
-            if (string.IsNullOrEmpty(initalValue))
-                throw new ArgumentException($"'{nameof(initalValue)}' cannot be null or empty.", nameof(initalValue));
-
-            #endregion
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException($"'{nameof(name)}' cannot be null or empty.", nameof(name));
+            if (string.IsNullOrEmpty(initalValue)) throw new ArgumentException($"'{nameof(initalValue)}' cannot be null or empty.", nameof(initalValue));
 
             Name = name;
             Size = size;
@@ -106,7 +99,6 @@ namespace LDF_FILEPARSER
 
             SelectAll = new RelayCommand(SelectAllPressed);
             ClearAll = new RelayCommand(ClearAllPressed);
-
         }
 
         public Signal(string name, string size, string initalValue, string[] rawSignalValues = null) : this(name, int.Parse(size), initalValue, rawSignalValues)

@@ -44,6 +44,8 @@ namespace LDF_FILEPARSER
                 FileName = Path.GetFileName(FileNameWithPath);
                 FileRawData = File.ReadAllText(FileNameWithPath);
 
+                Logger.LogInformation($"Loading file contents from: {FileNameWithPath}");
+
                 StringBuilder sb        = new StringBuilder();
                 /*
                 /* Here we are stripping out all the comments from the file
@@ -55,6 +57,7 @@ namespace LDF_FILEPARSER
                 /*      meaning the search will lazily (because it has a '?' flag after it so it will stop at the first closing comment it finds).
                 /* Removing the comments is necessary as the comments could break the parsing
                 /*/
+                Logger.LogInformation($"Parsing file contents to remove all comments making future parsing easier");
                 Regex openCloseLineComment  = new Regex(@"\/\*.*?\*\/", RegexOptions.Compiled);
                 Regex singleLineComment = new Regex(@"\/\/.*", RegexOptions.Compiled);
                 Regex multiLineComment = new Regex(@"\/\*.*?\*\/", RegexOptions.Singleline | RegexOptions.Compiled);
@@ -153,10 +156,13 @@ namespace LDF_FILEPARSER
             Regex logicalEncodingPattern  = new Regex(@"^\s*(logical_value)\s*,\s*((?:0x)?[0-9A-F]{1,})\s*,\s*\x22([^\x22]+)\x22\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
 
             MatchCollection encodingNodes = encodingTypePattern.Matches(signalEncodingsContent);
+            Logger.LogInformation($"Extracting all encodings");
             foreach (Match encodingNode in encodingNodes)
             {
                 string encodingName = encodingNode.Groups[2].Value.ToString();
                 EncodingNode encoding = new EncodingNode(encodingName);
+
+                Logger.LogInformation($"\t-> Encoding identified - {encodingName}");
 
                 MatchCollection physEncodingMatches = physicalEncodingPattern.Matches(encodingNode.Value);
                 foreach (Match physicalMatch in physEncodingMatches)
@@ -167,6 +173,7 @@ namespace LDF_FILEPARSER
                     for (; i < physicalMatch.Groups.Count - 1; i++)
                         physicalEncoding.Values.Add(physicalMatch.Groups[i].Value.ToString());
                     physicalEncoding.Description = physicalMatch.Groups[i].Value.ToString();
+                    Logger.LogInformation($"\t\t-> Description: {physicalEncoding.Description}, Value: {physicalEncoding.HexAddress}");
                     encoding.EncodingTypes.Add(physicalEncoding);
                 }
                 MatchCollection logicEncodingMatches = logicalEncodingPattern.Matches(encodingNode.Value);
@@ -176,7 +183,9 @@ namespace LDF_FILEPARSER
                     if (address.StartsWith("0x") == false)
                         address = address.ConvertToHex();
                     string description = logicalMatch.Groups[3].Value.ToString();
-                    encoding.EncodingTypes.Add(new LogicalEncodingValue(address, description));
+                    LogicalEncodingValue logicalEncoding = new LogicalEncodingValue(address, description);
+                    Logger.LogInformation($"\t\t-> Description: {logicalEncoding.Description}, Value: {logicalEncoding.HexAddress}");
+                    encoding.EncodingTypes.Add(logicalEncoding);
                 }
 
                 Encodings.Add(encodingName, encoding);
@@ -200,27 +209,29 @@ namespace LDF_FILEPARSER
                 return;
             }
 
-            Regex encodingRepresentationPattern = new Regex(@"^\s*([A-Z]\w+)\s*:\s*((?:.+?(?:,\s*|;)){1,})", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled);
+            Regex encodingRepresentationPattern = new Regex(@"^\s*([A-Z]\w+)\s*:\s*((?:.+?(?:,\s*|;)){1,})", RegexOptions.Multiline | RegexOptions.Compiled);
             MatchCollection encodingRepresentationMatches = encodingRepresentationPattern.Matches(signalEncodingRepresentation);
-            char[] whiteSpaces = new char[] { ' ', '\r', '\n' };
+            char[] whiteSpaces = new char[] { ' ', '\r', '\n', ';' };
+            Logger.LogInformation($"Extracting all signal representations");
             foreach (Match encodingRepresentation in encodingRepresentationMatches)
             {
                 string encodingName = encodingRepresentation.Groups[1].Value.ToString();
+                string[] signalNames = encodingRepresentation.Groups[2].Value.ToString().Split(',').Select(x => x.Trim(whiteSpaces)).ToArray();
+                Logger.LogInformation($"\t-> Encoding representation - {encodingName}: {string.Join(", ", signalNames)}");
                 if (Encodings.TryGetValue(encodingName, out EncodingNode encodingNode))
                 {
-                    string[] signalNames = encodingRepresentation.Groups[2].Value.ToString().Split(',');
                     foreach (string signalName in signalNames)
                     {
-                        if (Signals.TryGetValue(signalName.Trim(whiteSpaces), out Signal signal))
+                        if (Signals.TryGetValue(signalName, out Signal signal))
                         {
                             signal.UpdateEncoding(encodingNode);
                         }
                         else
-                            Logger.LogWarning($"Encoding signal '{signalName}' not found in list of signals");
+                            Logger.LogWarning($"\tEncoding signal '{signalName}' not found in list of signals");
                     }
                 }
                 else
-                    Logger.LogWarning($"Encoding '{encodingName}' not found in list of encodings");
+                    Logger.LogWarning($"\tEncoding '{encodingName}' not found in list of encodings");
             }
         }
 
@@ -246,7 +257,7 @@ namespace LDF_FILEPARSER
 
             MatchCollection frames = framePattern.Matches(framesContent);
             if (frames.Count == 0) throw new InvalidDataException("Unable to locate any frame definitions from extracted content");
-
+            Logger.LogInformation($"Extracting all frames");
             foreach (Match foundFrame in frames)
             {
                 string frameName             = foundFrame.Groups[1].Value.ToString();
@@ -259,10 +270,12 @@ namespace LDF_FILEPARSER
                 Frame frame = new Frame(frameName, frameID, length);
 
                 MatchCollection frameSignals = frameSignalPattern.Matches(foundFrame.Value);
+                Logger.LogInformation($"\t-> Frame identified - Name: {frameName}, ID: {frameID}, Length: {frameLength} byte(s) ({length * 8} bit(s))");
                 foreach (Match frameSignal in frameSignals)
                 {
                     string signalName       = frameSignal.Groups[1].Value.ToString();
                     string signalStartIndex = frameSignal.Groups[2].Value.ToString();
+                    Logger.LogInformation($"\t\t-> {signalName} (Starting bit index: {signalStartIndex})");
                     if (Signals.TryGetValue(signalName, out Signal signal))
                     {
                         if (int.TryParse(signalStartIndex, out int signalIndex) == false)
@@ -323,24 +336,27 @@ namespace LDF_FILEPARSER
             bool protocolVersionFound = false;
             bool languageVersionFound = false;
             bool speedFound = false;
-
+            Logger.LogInformation($"Extracting communication information");
             foreach (var newline in FileParsedData.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
             {
                 if (newline.Contains(NodeNames.ProtocolVersion))
                 {
                     ProtocolVersion = ExtractLINDescription(newline, 2);
+                    Logger.LogInformation($"\t-> Communication protocol version: {ProtocolVersion}");
                     protocolVersionFound = true;
                 }
                 else if (newline.Contains(NodeNames.LanguageVersion))
                 {
                     var test = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
                     LanguageVersion = ExtractLINDescription(newline, 2);
+                    Logger.LogInformation($"\t-> Language version: {LanguageVersion}");
                     languageVersionFound = true;
                 }
                 else if (newline.Contains(NodeNames.Speed))
                 {
                     var test = newline.Split(new char[] { CharSymbol.WhiteSpace, ';', '"' }, StringSplitOptions.RemoveEmptyEntries);
                     Speed = ExtractLINDescription(newline, 2, true);
+                    Logger.LogInformation($"\t-> Communication speed: {Speed}");
                     speedFound = true;
                 }
                 
@@ -364,6 +380,7 @@ namespace LDF_FILEPARSER
             if (string.IsNullOrEmpty(signalContent))
                 throw new ArgumentException($"'{nameof(signalContent)}' cannot be null or empty.", nameof(signalContent));
 
+            Logger.LogInformation($"Extracting all signals");
             var allsignals = new Regex(@"^\s*([A-Z]\w+):\s*(\d+),\s*(\d+),(?:\s*\S+,){1,}\s*\S+\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
 
             MatchCollection signals = allsignals.Matches(signalContent);
@@ -381,6 +398,7 @@ namespace LDF_FILEPARSER
                 string signalSize           = signal.Groups[2].Value.ToString();
                 string signalInitialValue   = signal.Groups[3].Value.ToString();
                 string[] lineItemsSeparated = signal.Groups[0].Value.ToString().Trim(new char[] { ' ', '\r', '\n' }).Split(new char[] { ',', ';', ':', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+                Logger.LogInformation($"\t-> Signal identified - Name: {signalName}, Signal Length: {signalSize} (in bits)");
                 Signals.Add(signalName, new Signal(signalName, signalSize, signalInitialValue, lineItemsSeparated));
             }
         }
