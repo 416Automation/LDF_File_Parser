@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -252,8 +253,8 @@ namespace LDF_FILEPARSER
         /// </exception>
         private void ExtractFrames(string framesContent)
         {
-            Regex framePattern = new Regex(@"^\s*([A-Z]\w+)\s*:\s*((?:0x)?[0-9A-F]{1,2}),\s*(\S+),\s*(\d+)\s*\x7B.*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled);
-            Regex frameSignalPattern = new Regex(@"^\s*([A-Z]\w+),\s*(\d+)\s*;\s*?", RegexOptions.Multiline | RegexOptions.Compiled);
+            Regex framePattern = new Regex(@"^\s*([A-Z]\w+)\s*:\s*((?:0x)?[0-9A-F]{1,2})\s*,\s*(\S+)\s*,\s*(\d+)\s*\x7B.*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled);
+            Regex frameSignalPattern = new Regex(@"^\s*([A-Z]\w+)\s*,\s*(\d+)\s*;\s*?", RegexOptions.Multiline | RegexOptions.Compiled);
 
             MatchCollection frames = framePattern.Matches(framesContent);
             if (frames.Count == 0) throw new InvalidDataException("Unable to locate any frame definitions from extracted content");
@@ -381,7 +382,7 @@ namespace LDF_FILEPARSER
                 throw new ArgumentException($"'{nameof(signalContent)}' cannot be null or empty.", nameof(signalContent));
 
             Logger.LogInformation($"Extracting all signals");
-            var allsignals = new Regex(@"^\s*([A-Z]\w+):\s*(\d+),\s*(\d+),(?:\s*\S+,){1,}\s*\S+\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
+            var allsignals = new Regex(@"^\s*([A-Z]\w+)\s*:\s*(\d+)\s*,\s*(\d+)\s*,(?:\s*\S+\s*,){1,}\s*\S+\s*;", RegexOptions.Multiline | RegexOptions.Compiled);
 
             MatchCollection signals = allsignals.Matches(signalContent);
             if (signals.Count == 0) throw new InvalidDataException("Unable to locate any signal definitions from extracted content");
@@ -424,7 +425,7 @@ namespace LDF_FILEPARSER
         /// </para>
         /// </summary>
         /// <returns>Frame node content as a string</returns>
-        private string GetFrameNodeContent() => GetNodeContent(new Regex(@"^Frames.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s*(?:0x)?(?:[0-9A-F]{1,}),\s*(?:\S+),\s*(?:\d+)\s*\x7B.*?\x7D){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+        private string GetFrameNodeContent() => GetNodeContent(new Regex(@"^Frames.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s*(?:0x)?(?:[0-9A-F]{1,})\s*,\s*(?:\S+)\s*,\s*(?:\d+)\s*\x7B.*?\x7D){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
 
         /// <summary>
         /// <para>This method will return the Signals node from the ldf file.</para>
@@ -442,7 +443,8 @@ namespace LDF_FILEPARSER
         /// </para>
         /// </summary>
         /// <returns>Signal node content as a string</returns>
-        private string GetSignalNodeContent() => GetNodeContent(new Regex(@"^Signals.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s*(?:\d+),\s*(?:\d+),(?:\s*\S+,){1,}\s*\S+\s*;){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+        private string GetSignalNodeContent() => GetNodeContent(new Regex(@"^Signals.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s* (?:\d+)\s*,\s* (?:\d+)\s*,(?:\s*\S+\s*,){1,}\s*\S+\s*;){1,}\s*?\x7D", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.Compiled));
+        // || ^Signals.*?\x7B(?:\s*?(?:[A-Z]\w+)\s*:\s*(?:\d+),\s*(?:\d+),(?:\s*\S+,){1,}\s*\S+\s*;){1,}\s*?\x7D
         /// <summary>
         /// <para>This method will return the Signal encoding types node from the ldf file.</para>
         /// <para>
