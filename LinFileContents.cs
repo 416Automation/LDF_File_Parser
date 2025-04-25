@@ -76,8 +76,22 @@ namespace LDF_FILEPARSER
                 ExtractLINDescription();
                 ExtractSignals(GetSignalNodeContent());
                 ExtractFrames(GetFrameNodeContent());
-                ExtractEncodings(GetSignalEncodingNodeContent());
-                ExtractEncodingsRepresentation(GetSignalRepresentationNodeContent());
+                try
+                {
+                    ExtractEncodings(GetSignalEncodingNodeContent());
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, $"Parsing file signal encodings unsuccessful, file name with path: {fileNameWithPath}");
+                }
+                try
+                {
+                    ExtractEncodingsRepresentation(GetSignalRepresentationNodeContent());
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, $"Parsing file signal representations unsuccessful, file name with path: {fileNameWithPath}");
+                }
 
                 foreach ((int largestSizeOfSignal, Signal signal, Frame frame) in from item in Frames
                                                                                   let largestSizeOfSignal = item.Signals.Max(s => s.Size)
