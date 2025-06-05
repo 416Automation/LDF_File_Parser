@@ -16,7 +16,7 @@ namespace LDF_FILEPARSER
 
             Name = name;
         }
-        public override string ToString() => $"Name: {Name}, EncodingTypes: {EncodingTypes.Join()}";
+        public override string ToString() => $"{Name}, EncodingTypes: {EncodingTypes.Join()}";
 
     }
 }

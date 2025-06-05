@@ -21,7 +21,7 @@ namespace LDF_FILEPARSER
 
         public int ResponseLength { get; set; }
 
-        public List<Signal> Signals { get; set; } = new List<Signal>();
+        public ObservableCollection<Signal> Signals { get; set; } = new ObservableCollection<Signal>();
 
         public Frame(string name, string iD, int responseLength)
         {
@@ -100,7 +100,7 @@ namespace LDF_FILEPARSER
             }
         }
 
-        public override string ToString() => $"Name: {Name} - ID: {ID}";
+        public override string ToString() => $"{Name} - ID: {ID}";
 
         protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

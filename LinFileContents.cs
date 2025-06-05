@@ -3,6 +3,7 @@ using LDF_File_Parser.Extension;
 using LDF_File_Parser.Logger;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -18,6 +19,7 @@ namespace LDF_FILEPARSER
         public IDictionary<string, EncodingNode> Encodings { get; set; } = new Dictionary<string, EncodingNode>();
         public string FileName { get; private set; } = string.Empty;
         public string FileNameWithPath { get; private set; } = string.Empty;
+        public string FilePath { get; private set; } = string.Empty;
         public string FileRawData { get; }
         public string FileParsedData { get; }
         public ICollection<Frame> Frames { get; set; } = new HashSet<Frame>();
@@ -42,6 +44,7 @@ namespace LDF_FILEPARSER
             try
             {
                 FileNameWithPath = fileNameWithPath;
+                FilePath = Path.GetDirectoryName(fileNameWithPath);
                 FileName = Path.GetFileName(FileNameWithPath);
                 FileRawData = File.ReadAllText(FileNameWithPath);
 
@@ -286,6 +289,7 @@ namespace LDF_FILEPARSER
 
                 MatchCollection frameSignals = frameSignalPattern.Matches(foundFrame.Value);
                 Logger.LogInformation($"\t-> Frame identified - Name: {frameName}, ID: {frameID}, Length: {frameLength} byte(s) ({length * 8} bit(s))");
+                List<Signal> signals = new List<Signal>();
                 foreach (Match frameSignal in frameSignals)
                 {
                     string signalName       = frameSignal.Groups[1].Value.ToString();
@@ -297,13 +301,14 @@ namespace LDF_FILEPARSER
                             throw new Exception($"Signal {signalName} has an invalid starting index: {signalStartIndex}");
 
                         signal.StartAddress = signalIndex;
-                        frame.Signals.Add(signal);
+                        signals.Add(signal);
                     }
                     else
                         throw new SignalNotFoundException($"Signal named {signalName} is not found from the parsed data of the LDF file");
                 }
+                frame.Signals.Clear();
+                signals.OrderBy(s => s.StartAddress).ToList().ForEach(x => frame.Signals.Add(x));
                 ConfigureNoDataBits(frame);
-                frame.Signals = frame.Signals.OrderBy(s => s.StartAddress).ToList();
                 Frames.Add(frame);
             }
         }

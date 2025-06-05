@@ -15,7 +15,7 @@ namespace LDF_FILEPARSER
         private int _integerValue = 0;
         private IEncodingValue _selectedEncoding;
 
-        public ICollection<BoolValues> BooleanValues { get; set; }
+        public ObservableCollection<BoolValues> BooleanValues { get; set; } = new ObservableCollection<BoolValues>();
         public RelayCommand ClearAll { get; private set; }
         public EncodingNode Encoding { get; set; }
 
@@ -43,7 +43,7 @@ namespace LDF_FILEPARSER
                 IntegerValue = Convert.ToInt32(_hexValue, 16);
                 ConvertBooleanArray(IntegerValue);
 
-                var foundEncoding = Encoding?.EncodingTypes.First(s => string.Equals(s.HexAddress, _hexValue));
+                var foundEncoding = Encoding?.EncodingTypes.FirstOrDefault(s => string.Equals(s.HexAddress, _hexValue));
                 if (foundEncoding != null) SelectedEncoding = foundEncoding;
             }
         }
@@ -117,7 +117,7 @@ namespace LDF_FILEPARSER
                 throw new ArgumentNullException(nameof(frame));
 
             Frame         = frame;
-            BooleanValues = new ObservableCollection<BoolValues>();
+            BooleanValues.Clear();
 
             /// Three things need to achieve
             /// Make a Boolean Values or the max size
@@ -128,7 +128,7 @@ namespace LDF_FILEPARSER
             maxSize += NumberOfUseDataBits;
 
             var bitsToEnable = Size + NumberOfUseDataBits;
-
+            List<BoolValues> temp = new List<BoolValues>();
             for (int i = 0; i < maxSize; i++)
             {
                 BoolValues bit;
@@ -147,13 +147,12 @@ namespace LDF_FILEPARSER
                     bit = new BoolValues(i, false);
                 }
                 bit.PerformBooleanToInt += BooleanValueChanged;
-                BooleanValues.Add(bit);
+                temp.Add(bit);
             }
-
-            BooleanValues = BooleanValues.OrderByDescending(s => s.Placeholder).ToList();
+            temp.OrderByDescending(s => s.Placeholder).ToList().ForEach(x => BooleanValues.Add(x));
         }
 
-        public override string ToString() => $"Name: {Name}, Size: {Size}, StartAddress: {StartAddress}, Initial Value: {InitalValue}";
+        public override string ToString() => $"{Name}, Size: {Size}, StartAddress: {StartAddress}, Initial Value: {InitalValue}";
 
         public void UpdateEncoding(EncodingNode encoding)
         {

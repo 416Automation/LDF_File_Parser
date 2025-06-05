@@ -7,15 +7,35 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Linq;
 
 namespace LDF_File_Viewer
 {
+    public delegate void SelectedFrameChangedEventHandler();
     public class LinViewerViewModel : INotifyPropertyChanged
     {
+        private Frame _selectedFrame;
+
         public RelayCommand<string> Browse { get; set; }
-        public ObservableCollection<Frame> Frames { get; set; }
+        public RelayCommand CopyToClipboardCommand { get; set; }
+        public ObservableCollection<Frame> Frames { get; set; } = new ObservableCollection<Frame>();
         public LinFileContents LinFileContent { get; set; }
-        public Frame SelectedFrame { get; set; }
+
+        public event SelectedFrameChangedEventHandler SelectedFrameChangedEvent;
+        
+        public Frame SelectedFrame 
+        {
+            get => _selectedFrame;
+            set
+            {
+                if (_selectedFrame != value)
+                {
+                    _selectedFrame = value;
+                    OnPropertyChanged(nameof(SelectedFrame));
+                    SelectedFrameChangedEvent?.Invoke();
+                }
+            }
+        }
         public RelayCommand<Signal> SelectedSignal { get; set; }
 
         /// <summary>
@@ -25,10 +45,17 @@ namespace LDF_File_Viewer
         public LinViewerViewModel()
         {
             Browse = new RelayCommand<string>(BrowseFile);
+            CopyToClipboardCommand = new RelayCommand(CopyToClipboard);
             SelectedSignal = new RelayCommand<Signal>(SelectedSignalTest);
         }
 
-      
+        private void CopyToClipboard()
+        {
+            if (LinFileContent is null) return;
+            if (string.IsNullOrWhiteSpace(LinFileContent.FileNameWithPath)) return;
+            Clipboard.SetText(LinFileContent.FileNameWithPath);
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public void BrowseFile(string fileName = "")
@@ -44,8 +71,10 @@ namespace LDF_File_Viewer
                 }
 
                 LinFileContent = new LinFileContents(fileName);
-                Frames = new ObservableCollection<Frame>(LinFileContent.Frames);
-                SelectedFrame = Frames[0];
+                Frames.Clear();
+                LinFileContent.Frames.ToList().ForEach(x => Frames.Add(x));
+                if (Frames.Count > 0)
+                    SelectedFrame = Frames.First();
             }
             catch (Exception exc)
             {
