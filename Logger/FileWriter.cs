@@ -12,6 +12,7 @@ namespace LDF_File_Parser.Logger
             public static void WriteData(string filePath, string data)
             {
                 _lock.EnterWriteLock();
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
                 try
                 {
                     File.AppendAllText(filePath, data);

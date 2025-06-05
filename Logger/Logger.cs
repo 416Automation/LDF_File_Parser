@@ -9,7 +9,7 @@ namespace LDF_File_Parser.Logger
 {
     public static partial class Logger
     {
-        public static string FileNameWithPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"LDF_{DateTime.Today:yyyy-MM-dd}.log");
+        public static string FileNameWithPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", $"LDF_{DateTime.Today:yyyy-MM-dd}.log");
 
         public static void LogInformation(string message)
         {

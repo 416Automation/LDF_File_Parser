@@ -2,3 +2,4 @@ bin/
 obj/
 packages/
 .vs/
+LDF_File_Viewer/FodyWeavers.xml
